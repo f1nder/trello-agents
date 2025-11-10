@@ -12,7 +12,7 @@ import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
 
-const formatRelativeTime = (timestamp: string): string => {
+const formatRuntime = (timestamp: string): string => {
   const parsed = Date.parse(timestamp);
   if (Number.isNaN(parsed)) {
     return '–';
@@ -20,10 +20,10 @@ const formatRelativeTime = (timestamp: string): string => {
   const diffMs = Date.now() - parsed;
   const minutes = Math.max(0, Math.floor(diffMs / 60000));
   if (minutes < 1) {
-    return 'just now';
+    return '0m';
   }
   if (minutes < 60) {
-    return `${minutes} min`;
+    return `${minutes}m`;
   }
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
@@ -192,8 +192,8 @@ const CardBackShell = () => {
             </div>
             <div className="pod-row__meta">
               <strong>{pod.name}</strong>
-              <span className="pod-row__time" title={new Date(pod.startedAt).toLocaleString()}>
-                {formatRelativeTime(pod.startedAt)} ago · {pod.lastEvent ?? 'no events yet'}
+              <span className="pod-row__time" title={`Started ${new Date(pod.startedAt).toLocaleString()}`}>
+                {formatRuntime(pod.startedAt)} · {pod.lastEvent ?? 'no events yet'}
               </span>
             </div>
             <div className="pod-row__actions">
@@ -203,6 +203,7 @@ const CardBackShell = () => {
                 onStreamLogs={handleStreamLogs}
                 disabled={!trello || !openShiftClient || readinessHints.length > 0}
                 isStopping={pendingStopIds.has(pod.id)}
+                variant="compact"
               />
             </div>
           </article>
