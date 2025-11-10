@@ -274,15 +274,6 @@ export class OpenShiftClient implements OpenShiftPodApi {
       });
     }
 
-    // const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
-    // // try {
-    // //   await this.request(podPath, { method: "DELETE" });
-    // // } catch (error) {
-    // //   if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
-    // //     throw error;
-    // //   }
-    // // }
-
     if (!jobName) {
       return;
     }
@@ -295,6 +286,17 @@ export class OpenShiftClient implements OpenShiftPodApi {
         !(error instanceof OpenShiftRequestError) ||
         (error.status !== 404 && error.status !== 410)
       ) {
+        throw error;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
+    try {
+      await this.request(podPath, { method: "DELETE" });
+    } catch (error) {
+      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
         throw error;
       }
     }
