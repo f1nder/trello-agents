@@ -14,18 +14,20 @@
     "show-settings"
   ],
   "icon": {
-    "url": "__POWERUP_BASE_URL__/icons/card-agents.svg"
+    "url": "./icons/card-agents.svg"
   },
-  "iframeConnectorUrl": "__POWERUP_BASE_URL__/powerup.html",
+  "iframeConnectorUrl": "./powerup.html",
   "connectors": [
     {
       "title": "Cluster Settings",
       "description": "Configure OpenShift URL, namespace, token, and SSL options",
-      "url": "__POWERUP_BASE_URL__/settings.html",
+      "url": "./settings.html",
       "icon": {
-        "url": "__POWERUP_BASE_URL__/icons/card-agents.svg"
+        "url": "./icons/card-agents.svg"
       },
-      "target": ["board-settings"]
+      "target": [
+        "board-settings"
+      ]
     }
   ]
 }
