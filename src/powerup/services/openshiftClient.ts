@@ -264,30 +264,17 @@ export class OpenShiftClient implements OpenShiftPodApi {
   async stopPod(podName: string, options: StopPodOptions = {}): Promise<void> {
     const namespace = options.namespace ?? this.config.namespace;
     const owner = options.owner;
-    if (!owner) {
-      const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
-      try {
-        await this.request(podPath, { method: "DELETE" });
-      } catch (error) {
-        if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
-          throw error;
-        }
+
+    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
+    try {
+      await this.request(podPath, { method: "DELETE" });
+    } catch (error) {
+      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
+        throw error;
       }
-      return;
     }
 
-    if (owner.kind === "DeploymentConfig") {
-      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${owner.name}`;
-      try {
-        await this.request(dcPath, { method: "DELETE" });
-      } catch (error) {
-        if (
-          !(error instanceof OpenShiftRequestError) ||
-          (error.status !== 404 && error.status !== 410)
-        ) {
-          throw error;
-        }
-      }
+    if (!owner) {
       return;
     }
 

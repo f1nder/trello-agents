@@ -278,7 +278,7 @@ const buildRunningBadge = async (
 
   if (watcher.status === "error") {
     return {
-      text: "Pods offline",
+      text: "Agents offline",
       color: "red",
       title: watcher.error?.message ?? "Unable to reach OpenShift pods API",
       refresh,
@@ -292,12 +292,12 @@ const buildRunningBadge = async (
 
   const plural = count === 1 ? "" : "s";
   return {
-    text: `${count} running pod${plural}`,
+    text: `${count} agent${plural}`,
     color: "green",
     title:
       count === 1
-        ? "1 pod is Running on this card"
-        : `${count} pods are Running on this card`,
+        ? "1 agent is Running on this card"
+        : `${count} agents are Running on this card`,
     refresh,
   };
 };
@@ -305,7 +305,7 @@ const buildRunningBadge = async (
 const runningPodsBadge = (
   t: TrelloPowerUp.Client
 ): TrelloPowerUp.CardBadge => ({
-  title: "Running pods",
+  title: "Running agents",
   dynamic: () => buildRunningBadge(t),
 });
 
