@@ -6,6 +6,7 @@ import { cardDetailBadges } from './capabilities/cardDetailBadges';
 import { authorizationStatus, showAuthorization } from './capabilities/authorization';
 import { showSettings } from './capabilities/settings';
 import logger from './utils/logger';
+import { TRELLO_APP_KEY } from './config/trello';
 
 const capabilityMap = {
   'card-back-section': cardBackSection,
@@ -34,7 +35,9 @@ const bootstrap = async () => {
   try {
     const powerUp = await waitForPowerUp();
     logger.info('initialize capabilities', Object.keys(capabilityMap));
-    powerUp.initialize(capabilityMap, { appName: APP_NAME });
+    const options: TrelloPowerUp.InitializeOptions & { appKey?: string } = { appName: APP_NAME };
+    if (TRELLO_APP_KEY) options.appKey = TRELLO_APP_KEY;
+    powerUp.initialize(capabilityMap, options);
     logger.info('initialize called');
   } catch (err) {
     logger.warn('TrelloPowerUp global not found. Did the client script load?', err);
