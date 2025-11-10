@@ -187,6 +187,34 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
   return watcher;
 };
 
+export interface RunningPodSnapshot {
+  count: number;
+  total: number;
+}
+
+export const fetchRunningPodSnapshot = async (
+  t: TrelloPowerUp.Client
+): Promise<RunningPodSnapshot | null> => {
+  const context = await resolvePodContext(t);
+  if (!context) {
+    return null;
+  }
+
+  try {
+    const pods = await context.clientFactory().listPods({
+      cardId: context.cardId,
+      namespace: context.namespace,
+    });
+    return {
+      count: countRunningPods(pods),
+      total: pods.length,
+    };
+  } catch (error) {
+    logger.warn("podRuntime: snapshot fetch failed", error);
+    throw error;
+  }
+};
+
 const resolvePodContext = async (
   t: TrelloPowerUp.Client
 ): Promise<PodRuntimeContext | null> => {
@@ -254,13 +282,4 @@ export const ensureRunningWatcher = async (
   watcher.touch();
   scheduleCleanup();
   return watcher;
-};
-
-export const warmRunningWatcher = async (t: TrelloPowerUp.Client) => {
-  try {
-    const watcher = await ensureRunningWatcher(t);
-    await watcher?.ready;
-  } catch (error) {
-    logger.debug("podRuntime: warm watcher failed", error);
-  }
 };
