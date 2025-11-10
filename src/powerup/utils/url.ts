@@ -7,16 +7,33 @@ export const resolveBaseUrl = (): string => {
   }
 
   if (typeof window !== 'undefined' && window.location) {
-    return window.location.origin;
+    const origin = window.location.origin;
+    if (origin && origin !== 'null' && !origin.startsWith('file://')) {
+      return origin;
+    }
   }
 
   return '';
+};
+
+const normalizePath = (path: string): string => {
+  if (path.startsWith('./')) {
+    return path.slice(1);
+  }
+  if (!path.startsWith('/')) {
+    return `/${path}`;
+  }
+  return path;
 };
 
 export const resolveAssetUrl = (path: string): string => {
   if (/^https?:/i.test(path)) {
     return path;
   }
+  const normalizedPath = normalizePath(path);
   const base = resolveBaseUrl();
-  return `${base}${path}`;
+  if (!base) {
+    return `.${normalizedPath}`;
+  }
+  return `${base}${normalizedPath}`;
 };
