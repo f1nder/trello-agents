@@ -263,7 +263,16 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   async stopPod(podName: string, options: StopPodOptions = {}): Promise<void> {
     const namespace = options.namespace ?? this.config.namespace;
-    const owner = options.owner;
+    let jobName: string | undefined;
+    try {
+      jobName = await this.resolvePodJobName(namespace, podName, options.owner);
+    } catch (error) {
+      logger.warn("[openshift] Unable to resolve job for pod", {
+        namespace,
+        podName,
+        message: (error as Error).message,
+      });
+    }
 
     const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
     try {
@@ -274,22 +283,51 @@ export class OpenShiftClient implements OpenShiftPodApi {
       }
     }
 
-    if (!owner) {
+    if (!jobName) {
       return;
     }
 
-    if (owner.kind === "Job") {
-      const jobPath = `/apis/batch/v1/namespaces/${namespace}/jobs/${owner.name}`;
-      try {
-        await this.request(jobPath, { method: "DELETE" });
-      } catch (error) {
-        if (
-          !(error instanceof OpenShiftRequestError) ||
-          (error.status !== 404 && error.status !== 410)
-        ) {
-          throw error;
-        }
+    const jobPath = `/apis/batch/v1/namespaces/${namespace}/jobs/${jobName}`;
+    try {
+      await this.request(jobPath, { method: "DELETE" });
+    } catch (error) {
+      if (
+        !(error instanceof OpenShiftRequestError) ||
+        (error.status !== 404 && error.status !== 410)
+      ) {
+        throw error;
       }
+    }
+  }
+
+  private async resolvePodJobName(
+    namespace: string,
+    podName: string,
+    owner?: PodOwnerReference | null
+  ): Promise<string | undefined> {
+    if (owner?.kind === "Job" && owner.name) {
+      return owner.name;
+    }
+
+    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
+    try {
+      const response = await this.request(podPath, { method: "GET" });
+      const pod = (await response.json()) as KubernetesPod;
+      const jobOwner = pod.metadata.ownerReferences?.find(
+        (reference) => reference.kind?.toLowerCase() === "job"
+      );
+      if (jobOwner?.name) {
+        return jobOwner.name;
+      }
+      return pod.metadata.labels?.["job-name"] ?? pod.metadata.labels?.jobName;
+    } catch (error) {
+      if (
+        error instanceof OpenShiftRequestError &&
+        (error.status === 404 || error.status === 410)
+      ) {
+        return undefined;
+      }
+      throw error;
     }
   }
 

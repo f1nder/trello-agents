@@ -210,8 +210,6 @@ const CardBackShell = () => {
       return;
     }
     markPending(pod.id, true);
-    const previousSnapshot = { ...pod };
-    livePods.mutate.remove(pod.id);
     try {
       await openShiftClient.stopPod(pod.name, {
         namespace: pod.namespace,
@@ -226,7 +224,6 @@ const CardBackShell = () => {
         display: "info",
       });
     } catch (error) {
-      livePods.mutate.upsert(previousSnapshot);
       await trello.alert({
         message: `Failed to stop ${pod.name}: ${(error as Error).message}`,
         display: "error",

@@ -1,18 +1,57 @@
 import { CARD_BACK_IFRAME, CARD_BACK_ICON_PATH } from "../config/constants";
 import { resolveAssetUrl } from "../utils/url";
 import logger from "../utils/logger";
+import { ensureRunningWatcher } from "../services/podRuntime";
+
+const MIN_SECTION_HEIGHT = 100;
+const POD_ROW_HEIGHT = 74;
+const HEADER_ALLOWANCE = 110;
+const MAX_VISIBLE_PODS = 5;
+
+const clampRows = (pods: number | null): number => {
+  if (!Number.isFinite(pods ?? NaN) || (pods ?? 0) <= 0) {
+    return 1;
+  }
+  return Math.min(Math.max(Math.floor(pods ?? 1), 1), MAX_VISIBLE_PODS);
+};
+
+const estimateSectionHeight = (rows: number): number => {
+  const estimated = HEADER_ALLOWANCE + rows * POD_ROW_HEIGHT;
+  return Math.max(MIN_SECTION_HEIGHT, Math.round(estimated));
+};
+
+const resolveDynamicHeight = async (
+  t: TrelloPowerUp.Client
+): Promise<number> => {
+  try {
+    const watcher = await ensureRunningWatcher(t);
+    if (!watcher) {
+      return MIN_SECTION_HEIGHT;
+    }
+    try {
+      await watcher.ready;
+    } catch {
+      // ignore bootstrap errors; watcher.status will describe issues elsewhere
+    }
+    const rows = clampRows(watcher.total);
+    return estimateSectionHeight(rows);
+  } catch (error) {
+    logger.debug("cardBackSection: falling back to default height", error);
+    return MIN_SECTION_HEIGHT;
+  }
+};
 
 export const cardBackSection: TrelloPowerUp.CapabilityHandler<
   [TrelloPowerUp.Client],
-  TrelloPowerUp.CardBackSectionResponse
-> = (t) => ({
+  Promise<TrelloPowerUp.CardBackSectionResponse>
+> = async (t) => ({
   title: "Agents",
   // Trello requires a monochrome gray icon for card-back sections.
   icon: resolveAssetUrl(CARD_BACK_ICON_PATH),
   content: {
     type: "iframe",
     url: t.signUrl(resolveAssetUrl(CARD_BACK_IFRAME)),
-    height: 200,
+    height: await resolveDynamicHeight(t),
   },
 });
 
