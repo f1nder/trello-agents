@@ -9,6 +9,7 @@ export interface ClusterSettingsResult {
   token: string | null;
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: Error | null;
+  reload: () => void;
 }
 
 export const useClusterSettings = (trello: TrelloPowerUp.Client | null): ClusterSettingsResult => {
@@ -16,6 +17,7 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [error, setError] = useState<Error | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     const preview = getPreviewConfig();
@@ -75,7 +77,9 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
     return () => {
       cancelled = true;
     };
-  }, [trello]);
+  }, [trello, reloadTick]);
 
-  return { settings, token, status, error };
+  const reload = () => setReloadTick((n) => n + 1);
+
+  return { settings, token, status, error, reload };
 };

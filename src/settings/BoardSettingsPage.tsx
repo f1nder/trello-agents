@@ -46,7 +46,8 @@ const BoardSettingsPage = () => {
     let nextTokenSecretId = formState.tokenSecretId;
     if (tokenInput.trim()) {
       const secretKey = `${STORAGE_KEYS.tokenSecretId}:${Date.now().toString(36)}`;
-      nextTokenSecretId = await trello.storeSecret(secretKey, tokenInput.trim());
+      await trello.storeSecret(secretKey, tokenInput.trim());
+      nextTokenSecretId = secretKey;
       setTokenInput('');
       setHasStoredToken(true);
     }

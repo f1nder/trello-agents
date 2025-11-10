@@ -86,7 +86,7 @@ const formatRuntime = (timestamp: string): string => {
 const CardBackShell = () => {
   const trello = usePowerUpClient();
   const theme = useAppliedTrelloTheme(trello);
-  const { settings, token, status: settingsStatus, error: settingsError } = useClusterSettings(trello);
+  const { settings, token, status: settingsStatus, error: settingsError, reload: reloadSettings } = useClusterSettings(trello);
   const { card, status: cardStatus, error: cardError } = useCardMetadata(trello);
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set());
   const previewConfig = getPreviewConfig();
@@ -239,6 +239,8 @@ const CardBackShell = () => {
                     title: 'Cluster Settings',
                     height: 520,
                   });
+                  // User may have saved new settings/token; refresh state.
+                  reloadSettings();
                 } catch (err) {
                   await trello.alert({ message: 'Unable to open settings', display: 'error' });
                 }

@@ -6,8 +6,8 @@ export const showSettings: TrelloPowerUp.CapabilityHandler<
 > = async (t) => {
   // Follow Trello docs: use a popup for show-settings from the Power-Ups menu.
   await t.modal({
-    title: "Cluster Settings",
+    title: "Agents Settings",
     url: t.signUrl(resolveAssetUrl("/settings.html")),
-    height: 260, // popup can be resized later by Trello
+    height: 560, // popup can be resized later by Trello
   });
 };
