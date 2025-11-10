@@ -251,7 +251,13 @@ export class OpenShiftClient implements OpenShiftPodApi {
     if (options.container) {
       url.searchParams.set('container', options.container);
     }
-    const response = await this.request(url.toString(), { method: 'GET', signal: options.signal, headers: { Accept: 'text/plain' } });
+    // Some clusters reject explicit 'text/plain' with 406 Not Acceptable.
+    // Use a permissive Accept so API can choose an appropriate content type.
+    const response = await this.request(url.toString(), {
+      method: 'GET',
+      signal: options.signal,
+      headers: { Accept: '*/*' },
+    });
     if (!response.body) {
       throw new Error('Log streaming is unavailable in this environment');
     }
