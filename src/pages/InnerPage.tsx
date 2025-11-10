@@ -16,7 +16,12 @@ const InnerPage = () => {
           This lightweight view proves out the React + TypeScript baseline that will evolve into the Trello
           Power-Up surfaces described in the spec. Future iterations will hydrate this UI with OpenShift data.
         </p>
-        <button type="button">Open Card Agents Prototype</button>
+        <button
+          type="button"
+          onClick={() => window.open('/preview.html', '_blank', 'noopener')}
+        >
+          Open Card Agents Prototype
+        </button>
       </header>
 
       <section className="status-grid">
