@@ -12,6 +12,28 @@ import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
 
+const formatRelativeTime = (timestamp: string): string => {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) {
+    return '–';
+  }
+  const diffMs = Date.now() - parsed;
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 1) {
+    return 'just now';
+  }
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
+};
+
 const CardBackShell = () => {
   const trello = usePowerUpClient();
   const { settings, token, status: settingsStatus, error: settingsError } = useClusterSettings(trello);
@@ -43,6 +65,18 @@ const CardBackShell = () => {
   });
 
   const iconUrl = useMemo(() => resolveAssetUrl('/icons/card-agents.svg'), []);
+  const sortedPods = useMemo(
+    () =>
+      [...livePods.pods].sort((a, b) => {
+        const aTime = Date.parse(a.startedAt);
+        const bTime = Date.parse(b.startedAt);
+        if (Number.isNaN(aTime) || Number.isNaN(bTime)) {
+          return 0;
+        }
+        return bTime - aTime;
+      }),
+    [livePods.pods],
+  );
 
   const markPending = (podId: string, nextState: boolean) => {
     setPendingStopIds((prev) => {
@@ -147,36 +181,40 @@ const CardBackShell = () => {
         )}
       </header>
 
-      <section className="status-grid">
-        {livePods.groups.map((group) => (
-          <article key={group.phase}>
-            <span className="badge">{group.phase}</span>
-            <h2>{group.pods.length} pods</h2>
-            <ul style={{ paddingLeft: '1rem', margin: '0.5rem 0 0', listStyle: 'disc' }}>
-              {group.pods.map((pod) => (
-                <li key={pod.id} style={{ marginBottom: '0.35rem' }}>
-                  <strong>{pod.name}</strong>
-                  <div style={{ fontSize: '0.85rem', color: '#475569' }}>
-                    Started {new Date(pod.startedAt).toLocaleString()}
-                    {pod.lastEvent ? ` · ${pod.lastEvent}` : ''}
-                  </div>
-                  <PodActions
-                    pod={pod}
-                    onStop={handleStopPod}
-                    onStreamLogs={handleStreamLogs}
-                    disabled={!trello || !openShiftClient || readinessHints.length > 0}
-                    isStopping={pendingStopIds.has(pod.id)}
-                  />
-                </li>
-              ))}
-            </ul>
+      <section className="pod-list">
+        {sortedPods.map((pod) => (
+          <article key={pod.id} className="pod-row">
+            <div className="pod-row__status">
+              <span className={`status-pill status-${pod.phase.toLowerCase()}`}>
+                {pod.phase}
+                {pod.phase === 'Running' ? <span className="status-spinner" aria-label="Running" /> : null}
+              </span>
+            </div>
+            <div className="pod-row__meta">
+              <strong>{pod.name}</strong>
+              <span className="pod-row__time" title={new Date(pod.startedAt).toLocaleString()}>
+                {formatRelativeTime(pod.startedAt)} ago · {pod.lastEvent ?? 'no events yet'}
+              </span>
+            </div>
+            <div className="pod-row__actions">
+              <PodActions
+                pod={pod}
+                onStop={handleStopPod}
+                onStreamLogs={handleStreamLogs}
+                disabled={!trello || !openShiftClient || readinessHints.length > 0}
+                isStopping={pendingStopIds.has(pod.id)}
+              />
+            </div>
           </article>
         ))}
-        {livePods.groups.length === 0 && (
-          <article>
-            <span className="badge">No pods</span>
-            <h2>Cluster returned 0 pods</h2>
-            <p>Either this Trello card has no running agents yet or the service-account token lacks permissions.</p>
+        {sortedPods.length === 0 && (
+          <article className="pod-row pod-row--empty">
+            <div className="pod-row__meta">
+              <strong>No pods in scope</strong>
+              <span className="pod-row__time">
+                Either this Trello card has no running agents or the service-account token lacks permissions.
+              </span>
+            </div>
           </article>
         )}
       </section>

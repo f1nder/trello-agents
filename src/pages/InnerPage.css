@@ -104,3 +104,99 @@
   margin-bottom: 0;
   color: rgba(255, 255, 255, 0.85);
 }
+
+.pod-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pod-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  background: white;
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.pod-row--empty {
+  grid-template-columns: 1fr;
+  justify-items: flex-start;
+}
+
+.pod-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pod-row__meta strong {
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.pod-row__time {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.pod-row__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.status-pill.status-running {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pill.status-pending,
+.status-pill.status-initialize,
+.status-pill.status-initializing {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.status-pill.status-completed,
+.status-pill.status-succeeded {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-pill.status-failed,
+.status-pill.status-unknown,
+.status-pill.status-terminating {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-spinner {
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid rgba(21, 128, 61, 0.3);
+  border-top-color: #15803d;
+  border-radius: 999px;
+  animation: pod-spin 0.7s linear infinite;
+}
+
+@keyframes pod-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
