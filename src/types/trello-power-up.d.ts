@@ -13,6 +13,13 @@ declare namespace TrelloPowerUp {
       title?: string;
       args?: Record<string, unknown>;
     }): Promise<void>;
+    popup(options: {
+      title?: string;
+      url: string;
+      height?: number;
+      mouseEvent?: MouseEvent;
+      target?: HTMLElement | string;
+    }): Promise<void>;
     alert(options: { message: string; display?: 'info' | 'warning' | 'error' }): Promise<void>;
     track(event: string, payload?: Record<string, unknown>): void;
     set(scope: 'card' | 'board', visibility: 'private' | 'shared', key: string, value: unknown): Promise<void>;

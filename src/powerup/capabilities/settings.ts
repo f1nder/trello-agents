@@ -1,10 +1,10 @@
 import { resolveAssetUrl } from '../utils/url';
 
 export const showSettings: TrelloPowerUp.CapabilityHandler<[TrelloPowerUp.Client], Promise<void>> = async (t) => {
-  // Use a modal for broader compatibility across Trello entry points.
-  await t.modal({
-    url: t.signUrl(resolveAssetUrl('/settings.html')),
+  // Follow Trello docs: use a popup for show-settings from the Power-Ups menu.
+  await t.popup({
     title: 'Cluster Settings',
-    height: 520,
+    url: t.signUrl(resolveAssetUrl('/settings.html')),
+    height: 260, // popup can be resized later by Trello
   });
 };

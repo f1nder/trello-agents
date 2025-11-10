@@ -226,6 +226,37 @@ const CardBackShell = () => {
             ))}
           </ul>
         )}
+        {trello && settingsStatus === 'ready' && (!settings.clusterUrl || !token) && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  trello.track('open-settings-from-card');
+                  await trello.modal({
+                    url: trello.signUrl(resolveAssetUrl('/settings.html')),
+                    title: 'Cluster Settings',
+                    height: 520,
+                  });
+                } catch (err) {
+                  await trello.alert({ message: 'Unable to open settings', display: 'error' });
+                }
+              }}
+              style={{
+                appearance: 'none',
+                border: 0,
+                background: 'var(--ca-primary)',
+                color: 'var(--ca-primary-contrast)',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Open Settings
+            </button>
+          </div>
+        )}
         {issues.length > 0 && (
           <div
             style={{

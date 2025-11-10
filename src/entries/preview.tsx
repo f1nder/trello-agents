@@ -129,6 +129,9 @@ const previewClient: TrelloPowerUp.Client = {
         resolve();
       }
     }),
+  popup: async ({ url }) => {
+    window.open(url, "_blank", "noopener");
+  },
   alert: async ({ message }) => {
     window.alert(message);
   },
@@ -213,11 +216,11 @@ const PreviewApp = () => {
         </p>
         <div className="theme-toggle">
           <span className="theme-toggle__label">Theme</span>
-        <div
-          className="theme-toggle__group"
-          role="group"
-          aria-label="Toggle Trello theme"
-        >
+          <div
+            className="theme-toggle__group"
+            role="group"
+            aria-label="Toggle Trello theme"
+          >
             <button
               type="button"
               className={`theme-toggle__button${
@@ -242,7 +245,8 @@ const PreviewApp = () => {
         </div>
         <div className="preview-hero__settings">
           <p>
-            Visit the settings page to explore the configuration UI without Trello.
+            Visit the settings page to explore the configuration UI without
+            Trello.
           </p>
           <a
             className="preview-hero__settings-link"
