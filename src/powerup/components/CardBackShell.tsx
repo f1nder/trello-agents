@@ -14,6 +14,7 @@ import PodActions from "./PodActions";
 import "../../styles/index.css";
 import "../../pages/InnerPage.css";
 import { trackEvent } from "../utils/analytics";
+import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 
 type StatusKind = "running" | "pending" | "complete" | "error";
 
@@ -202,6 +203,10 @@ const CardBackShell = () => {
 
   const handleStopPod = async (pod: AgentPod) => {
     if (!trello || !openShiftClient) {
+      return;
+    }
+    const confirmed = await confirmPodDeletion(pod, trello);
+    if (!confirmed) {
       return;
     }
     markPending(pod.id, true);

@@ -1,5 +1,5 @@
-import type { AgentPod, PodOwnerReference, PodPhase } from '../types/pods';
-import logger from '../utils/logger';
+import type { AgentPod, PodOwnerReference, PodPhase } from "../types/pods";
+import logger from "../utils/logger";
 
 export interface OpenShiftClientConfig {
   baseUrl: string;
@@ -17,7 +17,7 @@ export interface ListPodsParams {
 }
 
 export interface PodWatchEvent {
-  type: 'ADDED' | 'MODIFIED' | 'DELETED';
+  type: "ADDED" | "MODIFIED" | "DELETED";
   pod: AgentPod;
 }
 
@@ -28,7 +28,7 @@ export interface WatchPodsOptions extends ListPodsParams {
   /**
    * Hook invoked whenever the underlying stream transitions to a new connection state.
    */
-  onConnectionStateChange?: (state: 'connecting' | 'streaming') => void;
+  onConnectionStateChange?: (state: "connecting" | "streaming") => void;
   /**
    * Hook invoked just before each retry attempt (1-indexed).
    */
@@ -56,7 +56,10 @@ export interface OpenShiftPodApi {
   listPods(params?: ListPodsParams): Promise<AgentPod[]>;
   watchPods(handler: PodWatchHandler, options?: WatchPodsOptions): () => void;
   stopPod(podName: string, options?: StopPodOptions): Promise<void>;
-  streamLogs(podName: string, options?: StreamLogsOptions): Promise<ReadableStreamDefaultReader<Uint8Array>>;
+  streamLogs(
+    podName: string,
+    options?: StreamLogsOptions
+  ): Promise<ReadableStreamDefaultReader<Uint8Array>>;
 }
 
 const textDecoder = new TextDecoder();
@@ -64,54 +67,68 @@ const textDecoder = new TextDecoder();
 const waitFor = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'));
+      reject(new DOMException("Aborted", "AbortError"));
       return;
     }
     const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
+      signal?.removeEventListener("abort", onAbort);
       resolve();
     }, ms);
     const onAbort = () => {
       clearTimeout(timer);
-      reject(new DOMException('Aborted', 'AbortError'));
+      reject(new DOMException("Aborted", "AbortError"));
     };
-    signal?.addEventListener('abort', onAbort, { once: true });
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 
 const coercePhase = (phase?: string): PodPhase => {
   if (!phase) {
-    return 'Unknown';
+    return "Unknown";
   }
-  if (phase === 'Succeeded' || phase === 'Failed' || phase === 'Running' || phase === 'Pending' || phase === 'Unknown') {
+  if (
+    phase === "Succeeded" ||
+    phase === "Failed" ||
+    phase === "Running" ||
+    phase === "Pending" ||
+    phase === "Unknown"
+  ) {
     return phase;
   }
-  if (phase === 'Terminating') {
-    return 'Terminating';
+  if (phase === "Terminating") {
+    return "Terminating";
   }
-  return 'Unknown';
+  return "Unknown";
 };
 
 const mapPodResource = (resource: KubernetesPod): AgentPod => {
-  const containers = resource.spec?.containers?.map((container) => container.name) ?? [];
+  const containers =
+    resource.spec?.containers?.map((container) => container.name) ?? [];
   const ownerRef = resource.metadata.ownerReferences?.[0];
-  const readyCondition = resource.status?.conditions?.find((condition) => condition.type === 'Ready');
-  const lastEvent = readyCondition?.message ?? resource.status?.message ?? ownerRef?.kind;
-  const fallbackId = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const readyCondition = resource.status?.conditions?.find(
+    (condition) => condition.type === "Ready"
+  );
+  const lastEvent =
+    readyCondition?.message ?? resource.status?.message ?? ownerRef?.kind;
+  const fallbackId =
+    globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return {
     id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
-    name: resource.metadata.name ?? 'unknown',
+    name: resource.metadata.name ?? "unknown",
     phase: coercePhase(resource.status?.phase),
-    cardId: resource.metadata.labels?.trelloCardId ?? '',
-    namespace: resource.metadata.namespace ?? '',
+    cardId: resource.metadata.labels?.trelloCardId ?? "",
+    namespace: resource.metadata.namespace ?? "",
     startedAt: resource.status?.startTime ?? new Date().toISOString(),
     containers,
     lastEvent,
     nodeName: resource.spec?.nodeName,
-    restarts: resource.status?.containerStatuses?.reduce((sum, status) => sum + (status.restartCount ?? 0), 0),
+    restarts: resource.status?.containerStatuses?.reduce(
+      (sum, status) => sum + (status.restartCount ?? 0),
+      0
+    ),
     owner: ownerRef
       ? {
-          kind: ownerRef.kind ?? 'Unknown',
-          name: ownerRef.name ?? 'unknown',
+          kind: ownerRef.kind ?? "Unknown",
+          name: ownerRef.name ?? "unknown",
           uid: ownerRef.uid ?? undefined,
         }
       : undefined,
@@ -126,20 +143,24 @@ const buildLabelSelector = (cardId?: string, extraSelector?: string) => {
   if (extraSelector) {
     selectors.push(extraSelector);
   }
-  return selectors.join(',');
+  return selectors.join(",");
 };
 
 const normalizeBaseUrl = (value: string) => {
-  if (!value.endsWith('/')) {
+  if (!value.endsWith("/")) {
     return `${value}/`;
   }
   return value;
 };
 
 export class OpenShiftRequestError extends Error {
-  constructor(message: string, public readonly status: number, public readonly payload?: string) {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly payload?: string
+  ) {
     super(message);
-    this.name = 'OpenShiftRequestError';
+    this.name = "OpenShiftRequestError";
   }
 }
 
@@ -151,32 +172,42 @@ export class OpenShiftClient implements OpenShiftPodApi {
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
 
-  constructor(private readonly config: OpenShiftClientConfig, deps?: { fetchImpl?: typeof fetch }) {
-    this.fetchImpl = deps?.fetchImpl ?? (globalThis.fetch?.bind(globalThis) as typeof fetch);
+  constructor(
+    private readonly config: OpenShiftClientConfig,
+    deps?: { fetchImpl?: typeof fetch }
+  ) {
+    this.fetchImpl =
+      deps?.fetchImpl ?? (globalThis.fetch?.bind(globalThis) as typeof fetch);
     if (!this.fetchImpl) {
-      throw new Error('OpenShiftClient requires global fetch support');
+      throw new Error("OpenShiftClient requires global fetch support");
     }
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
   }
 
   async listPods(params: ListPodsParams = {}): Promise<AgentPod[]> {
     const url = this.buildPodUrl({ ...params, watch: false });
-    logger.debug('[openshift] listPods', { url });
-    const response = await this.request(url, { method: 'GET' });
-    const payload = (await response.json()) as KubernetesListResponse<KubernetesPod>;
+    logger.debug("[openshift] listPods", { url });
+    const response = await this.request(url, { method: "GET" });
+    const payload =
+      (await response.json()) as KubernetesListResponse<KubernetesPod>;
     const result = (payload.items ?? []).map(mapPodResource);
-    logger.debug('[openshift] listPods result', { count: result.length });
+    logger.debug("[openshift] listPods result", { count: result.length });
     return result;
   }
 
-  watchPods(handler: PodWatchHandler, options: WatchPodsOptions = {}): () => void {
+  watchPods(
+    handler: PodWatchHandler,
+    options: WatchPodsOptions = {}
+  ): () => void {
     const controller = new AbortController();
     const externalSignal = options.signal;
     if (externalSignal) {
       if (externalSignal.aborted) {
         controller.abort();
       } else {
-        externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+        externalSignal.addEventListener("abort", () => controller.abort(), {
+          once: true,
+        });
       }
     }
 
@@ -185,13 +216,15 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
     const loop = async () => {
       while (!stopped && !controller.signal.aborted) {
-        options.onConnectionStateChange?.('connecting');
+        options.onConnectionStateChange?.("connecting");
         try {
           await this.consumeWatchStream(handler, controller.signal, options);
           reconnectAttempt = 0;
         } catch (error) {
           if (controller.signal.aborted || stopped) {
-            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            if (
+              !(error instanceof DOMException && error.name === "AbortError")
+            ) {
               options.onError?.(error as Error);
             }
             return;
@@ -199,11 +232,19 @@ export class OpenShiftClient implements OpenShiftPodApi {
           reconnectAttempt += 1;
           options.onError?.(error as Error);
           options.onReconnect?.(reconnectAttempt);
-          const backoff = Math.min(30000, (options.backoffMs ?? 750) * (2 ** (reconnectAttempt - 1)));
+          const backoff = Math.min(
+            30000,
+            (options.backoffMs ?? 750) * 2 ** (reconnectAttempt - 1)
+          );
           try {
             await waitFor(backoff, controller.signal);
           } catch (abortError) {
-            if (!(abortError instanceof DOMException && abortError.name === 'AbortError')) {
+            if (
+              !(
+                abortError instanceof DOMException &&
+                abortError.name === "AbortError"
+              )
+            ) {
               options.onError?.(abortError as Error);
             }
             return;
@@ -222,77 +263,92 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   async stopPod(podName: string, options: StopPodOptions = {}): Promise<void> {
     const namespace = options.namespace ?? this.config.namespace;
-    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
-    try {
-      await this.request(podPath, { method: 'DELETE' });
-    } catch (error) {
-      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
-        throw error;
-      }
-    }
-
     const owner = options.owner;
     if (!owner) {
-      return;
-    }
-
-    if (owner.kind === 'DeploymentConfig') {
-      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${owner.name}`;
+      const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
       try {
-        await this.request(dcPath, { method: 'DELETE' });
+        await this.request(podPath, { method: "DELETE" });
       } catch (error) {
-        if (!(error instanceof OpenShiftRequestError) || (error.status !== 404 && error.status !== 410)) {
+        if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
           throw error;
         }
       }
       return;
     }
 
-    if (owner.kind === 'Job') {
+    if (owner.kind === "DeploymentConfig") {
+      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${owner.name}`;
+      try {
+        await this.request(dcPath, { method: "DELETE" });
+      } catch (error) {
+        if (
+          !(error instanceof OpenShiftRequestError) ||
+          (error.status !== 404 && error.status !== 410)
+        ) {
+          throw error;
+        }
+      }
+      return;
+    }
+
+    if (owner.kind === "Job") {
       const jobPath = `/apis/batch/v1/namespaces/${namespace}/jobs/${owner.name}`;
       try {
-        await this.request(jobPath, { method: 'DELETE' });
+        await this.request(jobPath, { method: "DELETE" });
       } catch (error) {
-        if (!(error instanceof OpenShiftRequestError) || (error.status !== 404 && error.status !== 410)) {
+        if (
+          !(error instanceof OpenShiftRequestError) ||
+          (error.status !== 404 && error.status !== 410)
+        ) {
           throw error;
         }
       }
     }
   }
 
-  async streamLogs(podName: string, options: StreamLogsOptions = {}): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+  async streamLogs(
+    podName: string,
+    options: StreamLogsOptions = {}
+  ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
     const namespace = options.namespace ?? this.config.namespace;
-    const url = new URL(`/api/v1/namespaces/${namespace}/pods/${podName}/log`, this.baseUrl);
-    url.searchParams.set('follow', 'true');
-    url.searchParams.set('timestamps', 'true');
+    const url = new URL(
+      `/api/v1/namespaces/${namespace}/pods/${podName}/log`,
+      this.baseUrl
+    );
+    url.searchParams.set("follow", "true");
+    url.searchParams.set("timestamps", "true");
     if (options.container) {
-      url.searchParams.set('container', options.container);
+      url.searchParams.set("container", options.container);
     }
     // Some clusters reject explicit 'text/plain' with 406 Not Acceptable.
     // Use a permissive Accept so API can choose an appropriate content type.
     const response = await this.request(url.toString(), {
-      method: 'GET',
+      method: "GET",
       signal: options.signal,
-      headers: { Accept: '*/*' },
+      headers: { Accept: "*/*" },
     });
     if (!response.body) {
-      throw new Error('Log streaming is unavailable in this environment');
+      throw new Error("Log streaming is unavailable in this environment");
     }
     return response.body.getReader();
   }
 
-  private async consumeWatchStream(handler: PodWatchHandler, signal: AbortSignal, options: WatchPodsOptions): Promise<void> {
+  private async consumeWatchStream(
+    handler: PodWatchHandler,
+    signal: AbortSignal,
+    options: WatchPodsOptions
+  ): Promise<void> {
     const url = this.buildPodUrl({ ...options, watch: true });
-    logger.debug('[openshift] watchPods connect', { url });
-    const response = await this.request(url, { method: 'GET', signal });
+    logger.debug("[openshift] watchPods connect", { url });
+    const response = await this.request(url, { method: "GET", signal });
     if (!response.body) {
-      throw new Error('Streaming not supported by fetch implementation');
+      throw new Error("Streaming not supported by fetch implementation");
     }
 
-    options.onConnectionStateChange?.('streaming');
+    options.onConnectionStateChange?.("streaming");
 
     const reader = response.body.getReader();
-    let buffered = '';
+    let buffered = "";
     while (true) {
       const { value, done } = await reader.read();
       if (done) {
@@ -304,8 +360,8 @@ export class OpenShiftClient implements OpenShiftPodApi {
   }
 
   private flushBuffer(buffered: string, handler: PodWatchHandler): string {
-    const lines = buffered.split('\n');
-    const remainder = lines.pop() ?? '';
+    const lines = buffered.split("\n");
+    const remainder = lines.pop() ?? "";
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) {
@@ -321,7 +377,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
           pod: mapPodResource(payload.object),
         });
       } catch (error) {
-        logger.warn('[openshift] Unable to parse watch payload', error);
+        logger.warn("[openshift] Unable to parse watch payload", error);
       }
     }
     return remainder;
@@ -330,36 +386,47 @@ export class OpenShiftClient implements OpenShiftPodApi {
   private buildPodUrl(params: ListPodsParams & { watch: boolean }): string {
     const namespace = params.namespace ?? this.config.namespace;
     const url = new URL(`/api/v1/namespaces/${namespace}/pods`, this.baseUrl);
-    url.searchParams.set('fieldSelector', params.fieldSelector ?? 'status.phase!=Failed');
+    url.searchParams.set(
+      "fieldSelector",
+      params.fieldSelector ?? "status.phase!=Failed"
+    );
     if (params.watch) {
-      url.searchParams.set('watch', 'true');
+      url.searchParams.set("watch", "true");
     }
-    const labelSelector = buildLabelSelector(params.cardId, params.labelSelector);
+    const labelSelector = buildLabelSelector(
+      params.cardId,
+      params.labelSelector
+    );
     if (labelSelector) {
-      url.searchParams.set('labelSelector', labelSelector);
+      url.searchParams.set("labelSelector", labelSelector);
     }
     return url.toString();
   }
 
-  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+  private async request(
+    path: string,
+    init: RequestInit = {}
+  ): Promise<Response> {
     const headers = this.mergeHeaders(init.headers);
-    logger.debug('[openshift] request', { path, method: init.method ?? 'GET' });
+    logger.debug("[openshift] request", { path, method: init.method ?? "GET" });
     let response: Response;
     try {
       response = await this.fetchImpl(path, {
         ...init,
         headers,
-        credentials: 'omit',
-        mode: 'cors',
+        credentials: "omit",
+        mode: "cors",
       });
     } catch (err) {
       // Browsers throw TypeError on CORS/preflight/network failures before any response.
       if (err instanceof TypeError) {
-        logger.warn('[openshift] network/CORS failure', { message: err.message });
+        logger.warn("[openshift] network/CORS failure", {
+          message: err.message,
+        });
         throw new OpenShiftRequestError(
-          'Network or CORS/preflight failure (browser blocked request)',
+          "Network or CORS/preflight failure (browser blocked request)",
           0,
-          err.message,
+          err.message
         );
       }
       throw err as Error;
@@ -372,16 +439,18 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   private mergeHeaders(headers?: HeadersInit): Headers {
     const merged = new Headers(headers ?? {});
-    if (!merged.has('Accept')) {
-      merged.set('Accept', 'application/json');
+    if (!merged.has("Accept")) {
+      merged.set("Accept", "application/json");
     }
     if (this.config.token) {
-      merged.set('Authorization', `Bearer ${this.config.token}`);
+      merged.set("Authorization", `Bearer ${this.config.token}`);
     }
     return merged;
   }
 
-  private async toRequestError(response: Response): Promise<OpenShiftRequestError> {
+  private async toRequestError(
+    response: Response
+  ): Promise<OpenShiftRequestError> {
     let payload: string | undefined;
     try {
       payload = await response.text();
@@ -389,7 +458,11 @@ export class OpenShiftClient implements OpenShiftPodApi {
       payload = undefined;
     }
     const message = `OpenShift request failed: ${response.status} ${response.statusText}`;
-    logger.warn('[openshift] request failed', { status: response.status, statusText: response.statusText, payload });
+    logger.warn("[openshift] request failed", {
+      status: response.status,
+      statusText: response.statusText,
+      payload,
+    });
     return new OpenShiftRequestError(message, response.status, payload);
   }
 }
@@ -439,6 +512,6 @@ interface KubernetesListResponse<T> {
 }
 
 interface KubernetesWatchEvent {
-  type: PodWatchEvent['type'];
+  type: PodWatchEvent["type"];
   object: KubernetesPod;
 }

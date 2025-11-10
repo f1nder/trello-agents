@@ -13,13 +13,8 @@ declare namespace TrelloPowerUp {
       title?: string;
       args?: Record<string, unknown>;
     }): Promise<void>;
-    popup(options: {
-      title?: string;
-      url: string;
-      height?: number;
-      mouseEvent?: MouseEvent;
-      target?: HTMLElement | string;
-    }): Promise<void>;
+    popup(options: PopupIframeOptions | PopupConfirmOptions): Promise<void>;
+    closePopup(): Promise<void>;
     alert(options: { message: string; display?: 'info' | 'warning' | 'error' }): Promise<void>;
     track(event: string, payload?: Record<string, unknown>): void;
     set(scope: 'card' | 'board', visibility: 'private' | 'shared', key: string, value: unknown): Promise<void>;
@@ -79,6 +74,29 @@ declare namespace TrelloPowerUp {
 
   interface InitializeOptions {
     appName?: string;
+  }
+
+  interface PopupIframeOptions {
+    title?: string;
+    url: string;
+    height?: number;
+    mouseEvent?: MouseEvent;
+    target?: HTMLElement | string;
+  }
+
+  interface PopupConfirmOptions {
+    type: 'confirm';
+    title?: string;
+    message: string;
+    confirmText?: string;
+    confirmStyle?: 'primary' | 'danger';
+    cancelText?: string;
+    onConfirm?: (t: TrelloPowerUp.Client, opts?: PopupConfirmCallbackData) => void | Promise<void>;
+    onCancel?: (t: TrelloPowerUp.Client, opts?: PopupConfirmCallbackData) => void | Promise<void>;
+  }
+
+  interface PopupConfirmCallbackData {
+    [key: string]: unknown;
   }
 }
 

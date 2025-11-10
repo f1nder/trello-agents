@@ -3,6 +3,7 @@ import { usePowerUpClient } from "../hooks/usePowerUpClient";
 import { useClusterSettings } from "../hooks/useClusterSettings";
 import { OpenShiftClient } from "../services/openshiftClient";
 import type { AgentPod } from "../types/pods";
+import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 import type { OpenShiftPodApi } from "../services/openshiftClient";
 import { getPreviewConfig } from "../utils/preview";
 import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
@@ -182,6 +183,10 @@ const LogStreamModal = () => {
 
   const stopPod = async () => {
     if (!pod || !openShiftClient || isStopping) return;
+    const confirmed = await confirmPodDeletion(pod, trello);
+    if (!confirmed) {
+      return;
+    }
     try {
       setIsStopping(true);
       abortRef.current?.abort();

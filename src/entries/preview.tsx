@@ -129,8 +129,23 @@ const previewClient: TrelloPowerUp.Client = {
         resolve();
       }
     }),
-  popup: async ({ url }) => {
-    window.open(url, "_blank", "noopener");
+  async popup(
+    this: TrelloPowerUp.Client,
+    options: TrelloPowerUp.PopupIframeOptions | TrelloPowerUp.PopupConfirmOptions
+  ) {
+    if ("type" in options && options.type === "confirm") {
+      const confirmed = window.confirm(options.message);
+      if (confirmed) {
+        await options.onConfirm?.(this, options);
+      } else {
+        await options.onCancel?.(this, options);
+      }
+      return;
+    }
+    window.open(options.url, "_blank", "noopener");
+  },
+  async closePopup() {
+    // no-op for preview harness
   },
   alert: async ({ message }) => {
     window.alert(message);
