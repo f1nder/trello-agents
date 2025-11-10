@@ -5,6 +5,7 @@ import { OpenShiftClient } from '../services/openshiftClient';
 import type { AgentPod } from '../types/pods';
 import type { OpenShiftPodApi } from '../services/openshiftClient';
 import { getPreviewConfig } from '../utils/preview';
+import { useAppliedTrelloTheme } from '../hooks/useAppliedTrelloTheme';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
 
@@ -12,6 +13,7 @@ const textDecoder = new TextDecoder();
 
 const LogStreamModal = () => {
   const trello = usePowerUpClient();
+  const theme = useAppliedTrelloTheme(trello);
   const { settings, token, status: settingsStatus } = useClusterSettings(trello);
   const [lines, setLines] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'streaming' | 'error'>('idle');
@@ -89,7 +91,7 @@ const LogStreamModal = () => {
   }, [openShiftClient, pod]);
 
   return (
-    <main className="inner-page" style={{ gap: '1rem' }}>
+    <main className="inner-page" style={{ gap: '1rem' }} data-theme={theme}>
       <header>
         <p className="eyebrow">Streaming logs</p>
         <h1>{pod ? pod.name : 'Pod logs'}</h1>
@@ -101,15 +103,15 @@ const LogStreamModal = () => {
         <p className="eyebrow">Status: {status}</p>
         {settingsStatus !== 'ready' && <p className="eyebrow">Loading board settings…</p>}
         {error && (
-          <p style={{ color: '#dc2626', margin: 0 }}>
+          <p style={{ color: 'var(--ca-error-text)', margin: 0 }}>
             {error.message}. Verify the token permits log streaming for this namespace.
           </p>
         )}
       </header>
       <section
         style={{
-          background: '#0f172a',
-          color: '#e2e8f0',
+          background: 'var(--ca-log-bg)',
+          color: 'var(--ca-log-text)',
           borderRadius: '0.75rem',
           padding: '1rem',
           height: '420px',

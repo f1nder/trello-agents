@@ -8,6 +8,7 @@ import { useCardMetadata } from '../hooks/useCardMetadata';
 import { OpenShiftClient } from '../services/openshiftClient';
 import { resolveAssetUrl } from '../utils/url';
 import { getPreviewConfig } from '../utils/preview';
+import { useAppliedTrelloTheme } from '../hooks/useAppliedTrelloTheme';
 import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
@@ -36,6 +37,7 @@ const formatRuntime = (timestamp: string): string => {
 
 const CardBackShell = () => {
   const trello = usePowerUpClient();
+  const theme = useAppliedTrelloTheme(trello);
   const { settings, token, status: settingsStatus, error: settingsError } = useClusterSettings(trello);
   const { card, status: cardStatus, error: cardError } = useCardMetadata(trello);
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set());
@@ -145,7 +147,7 @@ const CardBackShell = () => {
   const issues = [settingsError, cardError, livePods.error].filter(Boolean) as Error[];
 
   return (
-    <main className="inner-page" data-card-back>
+    <main className="inner-page" data-card-back data-theme={theme}>
       <header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src={iconUrl} alt="Card Agents" width={32} height={32} />
@@ -164,14 +166,29 @@ const CardBackShell = () => {
           {livePods.lastEventAt ? ` · last event ${new Date(livePods.lastEventAt).toLocaleTimeString()}` : ''}
         </p>
         {readinessHints.length > 0 && (
-          <ul style={{ margin: '0.75rem 0 0', paddingLeft: '1.25rem', color: '#b45309', fontSize: '0.95rem' }}>
+          <ul
+            style={{
+              margin: '0.75rem 0 0',
+              paddingLeft: '1.25rem',
+              color: 'var(--ca-warning-text)',
+              fontSize: '0.95rem',
+            }}
+          >
             {readinessHints.map((hint) => (
               <li key={hint}>{hint}</li>
             ))}
           </ul>
         )}
         {issues.length > 0 && (
-          <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '0.5rem', background: '#fef2f2', color: '#991b1b' }}>
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              background: 'var(--ca-issue-bg)',
+              color: 'var(--ca-issue-text)',
+            }}
+          >
             {issues.map((error) => (
               <p key={error.message} style={{ margin: 0 }}>
                 {error.message}

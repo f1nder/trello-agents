@@ -5,6 +5,7 @@
   display: flex;
   flex-direction: column;
   gap: 3rem;
+  color: var(--ca-text);
 }
 
 .inner-page header {
@@ -16,14 +17,14 @@
 .inner-page header button {
   align-self: flex-start;
   border: none;
-  background-color: #2563eb;
-  color: white;
+  background-color: var(--ca-button-bg);
+  color: var(--ca-button-color);
   padding: 0.85rem 1.4rem;
   border-radius: 999px;
   font-size: 0.95rem;
   cursor: pointer;
   transition: transform 150ms ease, box-shadow 150ms ease;
-  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+  box-shadow: var(--ca-button-shadow);
 }
 
 .inner-page header button:hover {
@@ -34,18 +35,18 @@
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-size: 0.75rem;
-  color: #475569;
+  color: var(--ca-text-muted);
 }
 
 .inner-page h1 {
   font-size: clamp(2rem, 4vw, 3rem);
   margin: 0;
-  color: #0f172a;
+  color: var(--ca-text);
 }
 
 .inner-page .lede {
   max-width: 60ch;
-  color: #475569;
+  color: var(--ca-text-muted);
   margin: 0;
 }
 
@@ -56,10 +57,10 @@
 }
 
 .status-grid article {
-  background: white;
+  background: var(--ca-surface);
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--ca-card-shadow);
 }
 
 .status-grid .badge {
@@ -69,8 +70,8 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #2563eb;
-  background: #dbeafe;
+  color: var(--ca-accent);
+  background: var(--ca-accent-muted);
 }
 
 .status-grid h2 {
@@ -80,7 +81,7 @@
 
 .status-grid p {
   margin: 0;
-  color: #475569;
+  color: var(--ca-text-muted);
 }
 
 .callouts {
@@ -90,8 +91,8 @@
 }
 
 .callouts div {
-  background: #0f172a;
-  color: white;
+  background: var(--ca-callout-bg);
+  color: var(--ca-callout-text);
   border-radius: 1rem;
   padding: 1.5rem;
 }
@@ -102,7 +103,7 @@
 
 .callouts p {
   margin-bottom: 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--ca-callout-muted, rgba(255, 255, 255, 0.85));
 }
 
 .pod-list {
@@ -116,11 +117,11 @@
   grid-template-columns: auto 1fr auto;
   gap: 0.75rem;
   align-items: center;
-  background: white;
+  background: var(--ca-surface);
   border-radius: 0.65rem;
   padding: 0.6rem 0.85rem;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: var(--ca-card-shadow-sm);
+  border: 1px solid var(--ca-border);
 }
 
 .pod-row--empty {
@@ -136,12 +137,12 @@
 
 .pod-row__meta strong {
   font-size: 0.95rem;
-  color: #0f172a;
+  color: var(--ca-text);
 }
 
 .pod-row__time {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ca-text-subtle);
 }
 
 .pod-row__actions {
@@ -162,28 +163,28 @@
 }
 
 .status-pill.status-running {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--ca-status-running-bg);
+  color: var(--ca-status-running-text);
 }
 
 .status-pill.status-pending,
 .status-pill.status-initialize,
 .status-pill.status-initializing {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--ca-status-pending-bg);
+  color: var(--ca-status-pending-text);
 }
 
 .status-pill.status-completed,
 .status-pill.status-succeeded {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--ca-status-completed-bg);
+  color: var(--ca-status-completed-text);
 }
 
 .status-pill.status-failed,
 .status-pill.status-unknown,
 .status-pill.status-terminating {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--ca-status-failed-bg);
+  color: var(--ca-status-failed-text);
 }
 
 .status-spinner {
@@ -205,9 +206,9 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: #fff;
-  color: #0f172a;
+  border: 1px solid var(--ca-icon-button-border);
+  background: var(--ca-icon-button-bg);
+  color: var(--ca-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -220,7 +221,7 @@
 }
 
 .icon-button:hover:not(:disabled) {
-  background: #f8fafc;
+  background: var(--ca-icon-button-hover-bg);
   transform: translateY(-1px);
 }
 
@@ -232,8 +233,71 @@
 .icon-button__spinner {
   width: 0.85rem;
   height: 0.85rem;
-  border: 2px solid rgba(15, 23, 42, 0.3);
-  border-top-color: #0f172a;
+  border: 2px solid var(--ca-spinner-track);
+  border-top-color: var(--ca-spinner-fill);
   border-radius: 999px;
   animation: pod-spin 0.7s linear infinite;
+}
+.preview-hero {
+  margin: 0 auto 1rem;
+  padding: 1rem;
+  max-width: 960px;
+  border-radius: 0.75rem;
+  background: var(--ca-preview-hero-bg);
+  border: 1px solid var(--ca-preview-hero-border);
+  color: var(--ca-text);
+}
+
+.preview-hero p {
+  margin: 0;
+  color: var(--ca-text-muted);
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.theme-toggle__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ca-theme-switcher-muted);
+}
+
+.theme-toggle__group {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: var(--ca-theme-switcher-bg);
+  border: 1px solid var(--ca-theme-switcher-border);
+}
+
+.theme-toggle__button {
+  border: none;
+  background: transparent;
+  color: var(--ca-theme-switcher-text);
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  box-shadow: none;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.theme-toggle__button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.theme-toggle__button.is-active {
+  background: var(--ca-theme-switcher-active);
+  color: var(--ca-button-color);
+  box-shadow: var(--ca-button-shadow);
 }
