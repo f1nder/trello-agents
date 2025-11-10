@@ -7,30 +7,37 @@ import { authorizationStatus, showAuthorization } from './capabilities/authoriza
 import { showSettings } from './capabilities/settings';
 import logger from './utils/logger';
 
-const bootstrap = () => {
+const capabilityMap = {
+  'card-back-section': cardBackSection,
+  'card-buttons': cardButtons,
+  'card-badges': cardBadges,
+  'card-detail-badges': cardDetailBadges,
+  'authorization-status': authorizationStatus,
+  'show-authorization': showAuthorization,
+  'show-settings': showSettings,
+} as TrelloPowerUp.CapabilityMap & Record<string, TrelloPowerUp.CapabilityHandler>;
+
+const waitForPowerUp = (timeoutMs = 8000, intervalMs = 100): Promise<TrelloPowerUpGlobal> =>
+  new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      const pu = (window as Window & { TrelloPowerUp?: TrelloPowerUpGlobal }).TrelloPowerUp;
+      if (pu && typeof pu.initialize === 'function') return resolve(pu);
+      if (Date.now() - start > timeoutMs) return reject(new Error('TrelloPowerUp global not found after wait'));
+      setTimeout(check, intervalMs);
+    };
+    check();
+  });
+
+const bootstrap = async () => {
   logger.info('bootstrap start');
-  const powerUp = (window as Window & { TrelloPowerUp?: TrelloPowerUpGlobal }).TrelloPowerUp;
-  if (!powerUp) {
-    logger.warn('TrelloPowerUp global not found. Did the client script load?');
-    return;
-  }
-
-  const capabilityMap = {
-    'card-back-section': cardBackSection,
-    'card-buttons': cardButtons,
-    'card-badges': cardBadges,
-    'card-detail-badges': cardDetailBadges,
-    'authorization-status': authorizationStatus,
-    'show-authorization': showAuthorization,
-    'show-settings': showSettings,
-  } as TrelloPowerUp.CapabilityMap & Record<string, TrelloPowerUp.CapabilityHandler>;
-
   try {
+    const powerUp = await waitForPowerUp();
     logger.info('initialize capabilities', Object.keys(capabilityMap));
     powerUp.initialize(capabilityMap, { appName: APP_NAME });
     logger.info('initialize called');
   } catch (err) {
-    logger.error('initialize failed', err);
+    logger.warn('TrelloPowerUp global not found. Did the client script load?', err);
   }
 };
 
