@@ -7,9 +7,15 @@ export const resolveBaseUrl = (): string => {
   }
 
   if (typeof window !== 'undefined' && window.location) {
-    const origin = window.location.origin;
-    if (origin && origin !== 'null' && !origin.startsWith('file://')) {
-      return origin;
+    // Use the directory of the current page so subpath deployments (e.g. GitHub Pages) work.
+    const href = window.location.href;
+    try {
+      const idx = href.lastIndexOf('/');
+      if (idx > 0) {
+        return stripTrailingSlash(href.slice(0, idx));
+      }
+    } catch {
+      // fall through
     }
   }
 

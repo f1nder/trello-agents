@@ -5,11 +5,13 @@ import { cardBadges } from './capabilities/cardBadges';
 import { cardDetailBadges } from './capabilities/cardDetailBadges';
 import { authorizationStatus, showAuthorization } from './capabilities/authorization';
 import { showSettings } from './capabilities/settings';
+import logger from './utils/logger';
 
 const bootstrap = () => {
+  logger.info('bootstrap start');
   const powerUp = (window as Window & { TrelloPowerUp?: TrelloPowerUpGlobal }).TrelloPowerUp;
   if (!powerUp) {
-    console.warn('[powerup] TrelloPowerUp global unavailable; skipping initialize.');
+    logger.warn('TrelloPowerUp global not found. Did the client script load?');
     return;
   }
 
@@ -23,9 +25,13 @@ const bootstrap = () => {
     'show-settings': showSettings,
   } as TrelloPowerUp.CapabilityMap & Record<string, TrelloPowerUp.CapabilityHandler>;
 
-  powerUp.initialize(capabilityMap, {
-    appName: APP_NAME,
-  });
+  try {
+    logger.info('initialize capabilities', Object.keys(capabilityMap));
+    powerUp.initialize(capabilityMap, { appName: APP_NAME });
+    logger.info('initialize called');
+  } catch (err) {
+    logger.error('initialize failed', err);
+  }
 };
 
 bootstrap();
