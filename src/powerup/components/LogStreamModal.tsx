@@ -1,27 +1,87 @@
-import { useEffect, useMemo, useState } from 'react';
-import { usePowerUpClient } from '../hooks/usePowerUpClient';
-import { useClusterSettings } from '../hooks/useClusterSettings';
-import { OpenShiftClient } from '../services/openshiftClient';
-import type { AgentPod } from '../types/pods';
-import type { OpenShiftPodApi } from '../services/openshiftClient';
-import { getPreviewConfig } from '../utils/preview';
-import { useAppliedTrelloTheme } from '../hooks/useAppliedTrelloTheme';
-import '../../styles/index.css';
-import '../../pages/InnerPage.css';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePowerUpClient } from "../hooks/usePowerUpClient";
+import { useClusterSettings } from "../hooks/useClusterSettings";
+import { OpenShiftClient } from "../services/openshiftClient";
+import type { AgentPod } from "../types/pods";
+import type { OpenShiftPodApi } from "../services/openshiftClient";
+import { getPreviewConfig } from "../utils/preview";
+import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
+import "../../styles/index.css";
+import "../../pages/InnerPage.css";
+
+const TAB_OPTIONS = [
+  {
+    id: "logs" as const,
+    label: "Logs",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M4 17l4-4 4 4 4-4 4 4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 7h16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    id: "info" as const,
+    label: "Info",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        <circle cx="12" cy="8" r="1" fill="currentColor" />
+        <path
+          d="M12 12v4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+];
 
 const textDecoder = new TextDecoder();
 
 const LogStreamModal = () => {
   const trello = usePowerUpClient();
   const theme = useAppliedTrelloTheme(trello);
-  const { settings, token, status: settingsStatus } = useClusterSettings(trello);
+  const {
+    settings,
+    token,
+    status: settingsStatus,
+  } = useClusterSettings(trello);
   const [lines, setLines] = useState<string[]>([]);
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'streaming' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    "idle" | "connecting" | "streaming" | "error"
+  >("idle");
   const [error, setError] = useState<Error | null>(null);
-  const [tab, setTab] = useState<'logs' | 'info'>('logs');
+  const [tab, setTab] = useState<"logs" | "info">("logs");
+  const [follow, setFollow] = useState(true);
+  const logsRef = useRef<HTMLDivElement | null>(null);
+  const isAutoScrollingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
   const previewConfig = getPreviewConfig();
 
-  const pod = trello?.arg<AgentPod>('pod');
+  const pod = trello?.arg<AgentPod>("pod");
   const previewClient = previewConfig?.openShiftClient ?? null;
   const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
     if (previewClient) {
@@ -45,11 +105,12 @@ const LogStreamModal = () => {
     }
 
     const abortController = new AbortController();
+    abortRef.current = abortController;
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     let cancelled = false;
     setLines([]);
     setError(null);
-    setStatus('connecting');
+    setStatus("connecting");
 
     const connect = async () => {
       try {
@@ -58,26 +119,30 @@ const LogStreamModal = () => {
           container: pod.containers[0],
           signal: abortController.signal,
         });
-        setStatus('streaming');
-        let buffered = '';
+        setStatus("streaming");
+        let buffered = "";
         while (!cancelled) {
           const { value, done } = await reader.read();
           if (done || !value) {
             break;
           }
           buffered += textDecoder.decode(value, { stream: true });
-          const segments = buffered.split('\n');
-          buffered = segments.pop() ?? '';
+          const segments = buffered.split("\n");
+          buffered = segments.pop() ?? "";
           const nextLines = segments.filter(Boolean);
           if (nextLines.length > 0) {
             setLines((prev) => [...prev, ...nextLines]);
           }
         }
       } catch (streamError) {
-        if (cancelled || (streamError instanceof DOMException && streamError.name === 'AbortError')) {
+        if (
+          cancelled ||
+          (streamError instanceof DOMException &&
+            streamError.name === "AbortError")
+        ) {
           return;
         }
-        setStatus('error');
+        setStatus("error");
         setError(streamError as Error);
       }
     };
@@ -88,86 +153,217 @@ const LogStreamModal = () => {
       cancelled = true;
       abortController.abort();
       reader?.cancel().catch(() => undefined);
+      abortRef.current = null;
     };
   }, [openShiftClient, pod]);
 
+  // Auto-scroll to bottom when following and new lines arrive (or when returning to Logs tab)
+  useEffect(() => {
+    if (tab !== "logs" || !follow) return;
+    const el = logsRef.current;
+    if (!el) return;
+    isAutoScrollingRef.current = true;
+    requestAnimationFrame(() => {
+      try {
+        el.scrollTo({ top: el.scrollHeight });
+      } finally {
+        setTimeout(() => {
+          isAutoScrollingRef.current = false;
+        }, 0);
+      }
+    });
+  }, [lines, tab, follow]);
+
+  const stripTimestamp = (line: string) =>
+    line.replace(
+      /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
+      ""
+    );
+
+  const stopPod = async () => {
+    if (!pod || !openShiftClient || isStopping) return;
+    try {
+      setIsStopping(true);
+      abortRef.current?.abort();
+      await openShiftClient.stopPod(pod.name, {
+        namespace: pod.namespace,
+        owner: pod.owner ?? null,
+      });
+      await trello?.alert?.({
+        message: `Stop requested for ${pod.name}`,
+        display: "info",
+      });
+    } catch (err) {
+      await trello?.alert?.({
+        message: `Failed to stop ${pod?.name}: ${(err as Error).message}`,
+        display: "error",
+      });
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
   return (
-    <main className="inner-page" style={{ gap: '1rem' }} data-theme={theme}>
+    <main className="inner-page" style={{ gap: "1rem" }} data-theme={theme}>
       <header>
         <p className="eyebrow">Pod</p>
-        <h1>{pod ? pod.name : 'Pod'}</h1>
+        <h1>{pod ? pod.name : "Pod"}</h1>
         <p className="lede" style={{ marginBottom: 0 }}>
           {pod
-            ? `Namespace ${pod.namespace} · container ${pod.containers[0] ?? 'default'}`
-            : 'Waiting for pod context from Trello…'}
+            ? `Namespace ${pod.namespace} · container ${
+                pod.containers[0] ?? "default"
+              }`
+            : "Waiting for pod context from Trello…"}
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p className="eyebrow" style={{ margin: 0 }}>Status: {status}</p>
-          <div className="tabs" role="tablist" aria-label="Logs tabs">
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>
+            Status: {status}
+          </p>
+          <div
+            className="log-toolbar"
+            role="toolbar"
+            aria-label="Log controls"
+          >
+            <div className="segmented" role="tablist" aria-label="Log views">
+              {TAB_OPTIONS.map(({ id, label, icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={`segmented__button ${tab === id ? "is-active" : ""}`}
+                  onClick={() => setTab(id)}
+                >
+                  {icon}
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
             <button
-              role="tab"
-              aria-selected={tab === 'logs'}
-              className={`tabs__tab ${tab === 'logs' ? 'is-active' : ''}`}
-              onClick={() => setTab('logs')}
+              type="button"
+              className="segmented__button segmented__button--danger"
+              onClick={stopPod}
+              disabled={isStopping || !openShiftClient}
+              aria-label={isStopping ? "Stopping pod" : "Stop pod"}
+              title="Stop pod"
             >
-              Logs
-            </button>
-            <button
-              role="tab"
-              aria-selected={tab === 'info'}
-              className={`tabs__tab ${tab === 'info' ? 'is-active' : ''}`}
-              onClick={() => setTab('info')}
-            >
-              Info
+              {isStopping ? (
+                <>
+                  <span className="segmented__spinner" aria-hidden="true" />
+                  <span>Stopping…</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 14 14"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="8"
+                      height="8"
+                      rx="2"
+                      fill="currentColor"
+                      fillOpacity="0.85"
+                    />
+                  </svg>
+                  <span>Stop</span>
+                </>
+              )}
             </button>
           </div>
         </div>
-        {settingsStatus !== 'ready' && <p className="eyebrow">Loading board settings…</p>}
+        {settingsStatus !== "ready" && (
+          <p className="eyebrow">Loading board settings…</p>
+        )}
         {error && (
-          <p style={{ color: 'var(--ca-error-text)', margin: 0 }}>
-            {error.message}. Verify the token permits log streaming for this namespace.
+          <p style={{ color: "var(--ca-error-text)", margin: 0 }}>
+            {error.message}. Verify the token permits log streaming for this
+            namespace.
           </p>
         )}
       </header>
-      {tab === 'logs' && (
+      {tab === "logs" && (
         <section
+          ref={logsRef}
+          onScroll={() => {
+            if (!isAutoScrollingRef.current && follow) setFollow(false);
+          }}
           style={{
-            background: 'var(--ca-log-bg)',
-            color: 'var(--ca-log-text)',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            height: '420px',
-            overflow: 'auto',
+            background: "var(--ca-log-bg)",
+            color: "var(--ca-log-text)",
+            borderRadius: "0.75rem",
+            padding: "1rem",
+            height: "420px",
+            overflow: "auto",
+            position: "relative",
             fontFamily: '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
           }}
         >
-          {lines.length === 0 ? <pre style={{ margin: 0, opacity: 0.7 }}>No log output yet…</pre> : null}
+          <div className="log-follow-container">
+            <button
+              type="button"
+              className={`log-follow ${follow ? "is-active" : ""}`}
+              aria-pressed={follow}
+              onClick={() => {
+                setFollow((f) => !f);
+                if (!follow) {
+                  const el = logsRef.current;
+                  if (el) el.scrollTo({ top: el.scrollHeight });
+                }
+              }}
+              title={
+                follow
+                  ? "Following logs (click to pause)"
+                  : "Click to follow tail"
+              }
+            >
+              {follow ? "Following" : "Follow"}
+            </button>
+          </div>
+          {lines.length === 0 ? (
+            <pre style={{ margin: 0, opacity: 0.7 }}>No log output yet…</pre>
+          ) : null}
           {lines.map((line, index) => (
             <pre key={`${line}-${index}`} style={{ margin: 0 }}>
-              {line}
+              {stripTimestamp(line)}
             </pre>
           ))}
         </section>
       )}
-      {tab === 'info' && (
+      {tab === "info" && (
         <section
           style={{
-            background: 'var(--ca-surface)',
-            color: 'var(--ca-text)',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            border: '1px solid var(--ca-border)',
+            background: "var(--ca-surface)",
+            color: "var(--ca-text)",
+            borderRadius: "0.75rem",
+            padding: "1rem",
+            border: "1px solid var(--ca-border)",
           }}
         >
           {!pod ? (
             <p style={{ margin: 0, opacity: 0.8 }}>No pod context.</p>
           ) : (
-            <dl style={{
-              display: 'grid',
-              gridTemplateColumns: 'max-content 1fr',
-              gap: '0.5rem 1rem',
-              margin: 0,
-            }}>
+            <dl
+              style={{
+                display: "grid",
+                gridTemplateColumns: "max-content 1fr",
+                gap: "0.5rem 1rem",
+                margin: 0,
+              }}
+            >
               <dt className="eyebrow">Name</dt>
               <dd style={{ margin: 0 }}>{pod.name}</dd>
               <dt className="eyebrow">Namespace</dt>
@@ -175,16 +371,18 @@ const LogStreamModal = () => {
               <dt className="eyebrow">Phase</dt>
               <dd style={{ margin: 0 }}>{pod.phase}</dd>
               <dt className="eyebrow">Started</dt>
-              <dd style={{ margin: 0 }}>{new Date(pod.startedAt).toLocaleString()}</dd>
+              <dd style={{ margin: 0 }}>
+                {new Date(pod.startedAt).toLocaleString()}
+              </dd>
               <dt className="eyebrow">Containers</dt>
-              <dd style={{ margin: 0 }}>{pod.containers.join(', ') || '—'}</dd>
+              <dd style={{ margin: 0 }}>{pod.containers.join(", ") || "—"}</dd>
               {pod.nodeName && (
                 <>
                   <dt className="eyebrow">Node</dt>
                   <dd style={{ margin: 0 }}>{pod.nodeName}</dd>
                 </>
               )}
-              {typeof pod.restarts === 'number' && (
+              {typeof pod.restarts === "number" && (
                 <>
                   <dt className="eyebrow">Restarts</dt>
                   <dd style={{ margin: 0 }}>{pod.restarts}</dd>
@@ -193,7 +391,9 @@ const LogStreamModal = () => {
               {pod.owner && (
                 <>
                   <dt className="eyebrow">Owner</dt>
-                  <dd style={{ margin: 0 }}>{pod.owner.kind} / {pod.owner.name}</dd>
+                  <dd style={{ margin: 0 }}>
+                    {pod.owner.kind} / {pod.owner.name}
+                  </dd>
                 </>
               )}
               {pod.lastEvent && (
@@ -206,7 +406,9 @@ const LogStreamModal = () => {
           )}
         </section>
       )}
-      {!trello && <p className="eyebrow">Waiting for Trello iframe bootstrap…</p>}
+      {!trello && (
+        <p className="eyebrow">Waiting for Trello iframe bootstrap…</p>
+      )}
     </main>
   );
 };

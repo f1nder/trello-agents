@@ -24,9 +24,9 @@
   border: none;
   background-color: var(--ca-button-bg);
   color: var(--ca-button-color);
-  padding: 0.85rem 1.4rem;
+  padding: 0.3rem 1.4rem;
   border-radius: 999px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: transform 150ms ease, box-shadow 150ms ease;
   box-shadow: var(--ca-button-shadow);
@@ -421,9 +421,9 @@
 /* Minimal Tabs */
 .tabs {
   display: inline-flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--ca-border);
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.35rem;
 }
 
 .tabs__tab {
@@ -433,18 +433,22 @@
   color: var(--ca-text-subtle);
   font: inherit;
   font-weight: 600;
-  padding: 0.35rem 0.1rem;
+  padding: 0.4rem 0.5rem;
   position: relative;
   cursor: pointer;
+  border-radius: 0.5rem;
+  transition: color 150ms ease, background 150ms ease;
 }
 
 .tabs__tab:hover,
 .tabs__tab:focus-visible {
   color: var(--ca-text);
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .tabs__tab.is-active {
   color: var(--ca-text);
+  background: rgba(148, 163, 184, 0.14);
 }
 
 .tabs__tab.is-active::after {
@@ -452,8 +456,139 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -0.3rem;
-  height: 2px;
-  background: var(--ca-accent);
-  border-radius: 1px;
+  bottom: -0.4rem;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ca-accent), rgba(37, 99, 235, 0.6));
+  border-radius: 2px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* Log header toolbar (modern segmented) */
+.log-toolbar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--ca-theme-switcher-bg);
+  border: 1px solid var(--ca-theme-switcher-border);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.segmented__button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ca-theme-switcher-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 150ms ease, color 150ms ease, transform 120ms ease,
+    box-shadow 150ms ease;
+  white-space: nowrap;
+}
+
+.segmented__button svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.segmented__button:hover:not(:disabled),
+.segmented__button:focus-visible {
+  background: rgba(148, 163, 184, 0.18);
+  outline: none;
+}
+
+.segmented__button.is-active {
+  background: var(--ca-theme-switcher-active);
+  color: var(--ca-button-color);
+  box-shadow: var(--ca-button-shadow);
+}
+
+.segmented__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Danger action (Stop) styled to stand apart */
+.segmented__button--danger {
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: linear-gradient(
+    120deg,
+    var(--ca-issue-bg),
+    rgba(248, 113, 113, 0.08)
+  );
+  color: var(--ca-issue-text);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.15);
+}
+
+.segmented__button--danger:hover:not(:disabled),
+.segmented__button--danger:focus-visible:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.segmented__spinner {
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 2px solid var(--ca-spinner-track);
+  border-top-color: var(--ca-spinner-fill);
+  border-radius: 999px;
+  animation: pod-spin 0.7s linear infinite;
+}
+
+.segmented__button--danger .segmented__spinner {
+  border: 2px solid rgba(248, 113, 113, 0.35);
+  border-top-color: var(--ca-issue-text);
+}
+
+/* Log canvas follow control */
+.log-follow-container {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
+}
+
+.log-follow {
+  appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--ca-log-text);
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease,
+    transform 120ms ease;
+}
+
+.log-follow:hover,
+.log-follow:focus-visible {
+  background: rgba(2, 6, 23, 0.5);
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.log-follow.is-active {
+  border-color: rgba(59, 130, 246, 0.65);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
 }
