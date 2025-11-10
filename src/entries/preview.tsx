@@ -5,8 +5,12 @@ import LogStreamModal from "../powerup/components/LogStreamModal";
 import { MockOpenShiftClient } from "../powerup/services/mockOpenShiftClient";
 import type { ClusterSettings } from "../powerup/types/settings";
 import type { CardMetadata } from "../powerup/types/trello";
-import type { PreviewConfig } from "../powerup/utils/preview";
-import { getPreviewConfig } from "../powerup/utils/preview";
+import {
+  getPreviewConfig,
+  PREVIEW_THEME_EVENT,
+  type PreviewConfig,
+  type TrelloTheme,
+} from "../powerup/utils/preview";
 
 const previewSettings: ClusterSettings = {
   clusterUrl: "https://preview.openshift.local",
@@ -35,6 +39,44 @@ const previewConfig: PreviewConfig = {
   card: previewCard,
   openShiftClient: mockOpenShift,
 };
+
+const IconSun = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path
+      d="M12 4V2m0 20v-2m6.364-12.364 1.414-1.414m-13.657 13.657 1.414-1.414M22 12h-2M4 12H2m15.364 6.364 1.414 1.414M5.222 5.222 6.636 6.636M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  </svg>
+);
+
+const IconMoon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path
+      d="M21 15.5A8.5 8.5 0 0 1 8.5 3 7 7 0 0 0 9 17a7 7 0 0 0 12 1.5Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  </svg>
+);
 
 type StorageKey = `${"card" | "board"}:${"private" | "shared"}:${string}`;
 const storage = new Map<StorageKey, unknown>();
@@ -118,6 +160,15 @@ window.__CARD_AGENTS_PREVIEW__ = previewConfig;
 const PreviewApp = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const resolverRef = useRef<(() => void) | null>(null);
+  const systemPrefersDark =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  const seedTheme: TrelloTheme =
+    previewConfig.theme ?? (systemPrefersDark ? "dark" : "light");
+  if (!previewConfig.theme) {
+    previewConfig.theme = seedTheme;
+  }
+  const [theme, setTheme] = useState<TrelloTheme>(seedTheme);
 
   const closeModal = useCallback(() => {
     const config = getPreviewConfig();
@@ -137,28 +188,62 @@ const PreviewApp = () => {
     return () => registerModalHandler(null);
   }, []);
 
+  useEffect(() => {
+    previewConfig.theme = theme;
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-trello-theme", theme);
+      document.body?.setAttribute("data-trello-theme", theme);
+    }
+    window.dispatchEvent(
+      new CustomEvent<TrelloTheme>(PREVIEW_THEME_EVENT, { detail: theme })
+    );
+  }, [theme]);
+
+  const applyTheme = (nextTheme: TrelloTheme) => () => {
+    setTheme((current) => (current === nextTheme ? current : nextTheme));
+  };
+
   return (
     <>
-      <section
-        style={{
-          margin: "0 auto 1rem",
-          padding: "1rem",
-          maxWidth: "960px",
-          borderRadius: "0.75rem",
-          background: "#f1f5f9",
-          border: "1px solid #e2e8f0",
-          color: "#0f172a",
-        }}
-      >
+      <section className="preview-hero">
         <p className="eyebrow">Preview harness</p>
-        <h1 style={{ margin: "0.25rem 0" }}>
+        <h1 style={{ margin: "0.25rem 0", color: "var(--ca-text)" }}>
           Card Agents standalone sandbox (BETA)
         </h1>
-        <p style={{ margin: 0 }}>
+        <p>
           This page renders the real card-back + log modal components without
           Trello. Dummy pods stream in via the mock OpenShift client so you can
           exercise Stop Pod and Stream Logs flows before wiring a live cluster.
         </p>
+        <div className="theme-toggle">
+          <span className="theme-toggle__label">Theme</span>
+          <div
+            className="theme-toggle__group"
+            role="group"
+            aria-label="Toggle Trello theme"
+          >
+            <button
+              type="button"
+              className={`theme-toggle__button${
+                theme === "light" ? " is-active" : ""
+              }`}
+              onClick={applyTheme("light")}
+            >
+              <IconSun />
+              Light
+            </button>
+            <button
+              type="button"
+              className={`theme-toggle__button${
+                theme === "dark" ? " is-active" : ""
+              }`}
+              onClick={applyTheme("dark")}
+            >
+              <IconMoon />
+              Dark
+            </button>
+          </div>
+        </div>
       </section>
       <CardBackShell />
       {modalVisible && (
@@ -166,7 +251,7 @@ const PreviewApp = () => {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 23, 42, 0.65)",
+            background: "var(--ca-modal-scrim)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -178,7 +263,7 @@ const PreviewApp = () => {
         >
           <div
             style={{
-              background: "#fff",
+              background: "var(--ca-modal-surface)",
               borderRadius: "1rem",
               width: "min(960px, 100%)",
               maxHeight: "90vh",
@@ -186,6 +271,7 @@ const PreviewApp = () => {
               boxShadow: "0 10px 35px rgba(15, 23, 42, 0.25)",
               position: "relative",
               pointerEvents: "auto",
+              border: "1px solid var(--ca-modal-border)",
             }}
           >
             <header
@@ -194,7 +280,8 @@ const PreviewApp = () => {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "1rem 1.25rem",
-                borderBottom: "1px solid #e2e8f0",
+                borderBottom: "1px solid var(--ca-modal-border)",
+                background: "var(--ca-modal-surface)",
               }}
             >
               <div>

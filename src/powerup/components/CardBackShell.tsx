@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { AgentPod } from '../types/pods';
 import type { OpenShiftPodApi } from '../services/openshiftClient';
 import { useLivePods } from '../hooks/useLivePods';
@@ -8,9 +9,56 @@ import { useCardMetadata } from '../hooks/useCardMetadata';
 import { OpenShiftClient } from '../services/openshiftClient';
 import { resolveAssetUrl } from '../utils/url';
 import { getPreviewConfig } from '../utils/preview';
+import { useAppliedTrelloTheme } from '../hooks/useAppliedTrelloTheme';
 import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
+
+type StatusKind = 'running' | 'pending' | 'complete' | 'error';
+
+const statusFamilies: Record<StatusKind, string[]> = {
+  running: ['running'],
+  pending: ['pending', 'initialize', 'initializing', 'containercreating', 'queued', 'waiting'],
+  complete: ['succeeded', 'completed', 'complete'],
+  error: ['failed', 'error', 'unknown', 'terminating', 'crashloopbackoff', 'evicted'],
+};
+
+const inferStatusKind = (phase: string): StatusKind => {
+  const normalized = phase.toLowerCase();
+  if (statusFamilies.running.includes(normalized)) {
+    return 'running';
+  }
+  if (statusFamilies.pending.includes(normalized)) {
+    return 'pending';
+  }
+  if (statusFamilies.complete.includes(normalized)) {
+    return 'complete';
+  }
+  if (statusFamilies.error.includes(normalized)) {
+    return 'error';
+  }
+  return 'pending';
+};
+
+const StatusIndicator = ({ phase }: { phase: string }) => {
+  const kind = inferStatusKind(phase);
+  let visual: ReactNode;
+  if (kind === 'running') {
+    visual = <span className="status-indicator__spinner" aria-hidden="true" />;
+  } else if (kind === 'complete') {
+    visual = <span className="status-indicator__dot status-indicator__dot--complete" aria-hidden="true" />;
+  } else if (kind === 'error') {
+    visual = <span className="status-indicator__dot status-indicator__dot--error" aria-hidden="true" />;
+  } else {
+    visual = <span className="status-indicator__dot status-indicator__dot--pending" aria-hidden="true" />;
+  }
+  return (
+    <span className="status-indicator" role="img" aria-label={`${phase} pod`}>
+      {visual}
+      <span className="sr-only">{phase}</span>
+    </span>
+  );
+};
 
 const formatRuntime = (timestamp: string): string => {
   const parsed = Date.parse(timestamp);
@@ -36,6 +84,7 @@ const formatRuntime = (timestamp: string): string => {
 
 const CardBackShell = () => {
   const trello = usePowerUpClient();
+  const theme = useAppliedTrelloTheme(trello);
   const { settings, token, status: settingsStatus, error: settingsError } = useClusterSettings(trello);
   const { card, status: cardStatus, error: cardError } = useCardMetadata(trello);
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set());
@@ -145,7 +194,7 @@ const CardBackShell = () => {
   const issues = [settingsError, cardError, livePods.error].filter(Boolean) as Error[];
 
   return (
-    <main className="inner-page" data-card-back>
+    <main className="inner-page" data-card-back data-theme={theme}>
       <header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src={iconUrl} alt="Card Agents" width={32} height={32} />
@@ -164,14 +213,29 @@ const CardBackShell = () => {
           {livePods.lastEventAt ? ` · last event ${new Date(livePods.lastEventAt).toLocaleTimeString()}` : ''}
         </p>
         {readinessHints.length > 0 && (
-          <ul style={{ margin: '0.75rem 0 0', paddingLeft: '1.25rem', color: '#b45309', fontSize: '0.95rem' }}>
+          <ul
+            style={{
+              margin: '0.75rem 0 0',
+              paddingLeft: '1.25rem',
+              color: 'var(--ca-warning-text)',
+              fontSize: '0.95rem',
+            }}
+          >
             {readinessHints.map((hint) => (
               <li key={hint}>{hint}</li>
             ))}
           </ul>
         )}
         {issues.length > 0 && (
-          <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '0.5rem', background: '#fef2f2', color: '#991b1b' }}>
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              background: 'var(--ca-issue-bg)',
+              color: 'var(--ca-issue-text)',
+            }}
+          >
             {issues.map((error) => (
               <p key={error.message} style={{ margin: 0 }}>
                 {error.message}
@@ -185,10 +249,7 @@ const CardBackShell = () => {
         {sortedPods.map((pod) => (
           <article key={pod.id} className="pod-row">
             <div className="pod-row__status">
-              <span className={`status-pill status-${pod.phase.toLowerCase()}`}>
-                {pod.phase}
-                {pod.phase === 'Running' ? <span className="status-spinner" aria-label="Running" /> : null}
-              </span>
+              <StatusIndicator phase={pod.phase} />
             </div>
             <div className="pod-row__meta">
               <strong>{pod.name}</strong>
