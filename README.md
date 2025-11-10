@@ -15,6 +15,13 @@ npm run dev
 
 Visit `http://localhost:5173` to load the inner-page prototype.
 
+The dev server now exposes multiple entry points used by Trello:
+
+- `/powerup.html` — capability bootstrap (no visible UI).
+- `/card-back.html` — iframe used for the card-back section + buttons.
+- `/settings.html` — native Power-Up board settings iframe.
+- `/logs.html` — Trello modal placeholder for live log streaming.
+
 ## Scripts
 
 - `npm run dev` — start Vite dev server.
@@ -27,3 +34,4 @@ Visit `http://localhost:5173` to load the inner-page prototype.
 - Wire Trello Power-Up capabilities (card-back section, card buttons, badges, modals, settings).
 - Implement OpenShift watch client + hooks for live pod updates.
 - Add stop/log actions plus GitHub Pages deployment pipeline per acceptance criteria.
+- Replace `__POWERUP_BASE_URL__` placeholders in `public/manifest.json` with your deployed origin or drive the value via `VITE_POWERUP_BASE_URL` for local previews.
