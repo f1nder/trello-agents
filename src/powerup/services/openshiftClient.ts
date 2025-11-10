@@ -403,15 +403,23 @@ export class OpenShiftClient implements OpenShiftPodApi {
     return url.toString();
   }
 
+  private resolveRequestUrl(path: string): string {
+    if (/^https?:/i.test(path)) {
+      return path;
+    }
+    return new URL(path, this.baseUrl).toString();
+  }
+
   private async request(
     path: string,
     init: RequestInit = {}
   ): Promise<Response> {
     const headers = this.mergeHeaders(init.headers);
-    logger.debug("[openshift] request", { path, method: init.method ?? "GET" });
+    const url = this.resolveRequestUrl(path);
+    logger.debug("[openshift] request", { url, method: init.method ?? "GET" });
     let response: Response;
     try {
-      response = await this.fetchImpl(path, {
+      response = await this.fetchImpl(url, {
         ...init,
         headers,
         credentials: "omit",

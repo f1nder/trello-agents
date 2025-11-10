@@ -46,11 +46,26 @@ declare namespace TrelloPowerUp {
     condition?: CapabilityHandler<[Client], boolean | Promise<boolean>>;
   }
 
+  type BadgeColor =
+    | 'blue'
+    | 'green'
+    | 'orange'
+    | 'red'
+    | 'yellow'
+    | 'purple'
+    | 'pink'
+    | 'sky'
+    | 'lime'
+    | 'light-gray';
+
   interface CardBadge {
     icon?: string;
     text?: string;
-    color?: string;
+    color?: BadgeColor | null;
     title?: string;
+    monochrome?: boolean;
+    refresh?: number;
+    dynamic?: () => CardBadge | null | Promise<CardBadge | null>;
   }
 
   interface CardDetailBadge extends CardBadge {
