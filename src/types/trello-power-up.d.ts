@@ -57,7 +57,7 @@ declare namespace TrelloPowerUp {
 
   interface CardBackSectionResponse {
     title: string;
-    icon?: { url: string };
+    icon?: string | { url: string };
     content: {
       type: 'iframe';
       url: string;
