@@ -1,23 +1,27 @@
-import { STORAGE_KEYS } from '../config/constants';
-import { OpenShiftClient, type OpenShiftPodApi, type PodWatchEvent } from '../services/openshiftClient';
-import type { AgentPod } from '../types/pods';
-import type { ClusterSettings } from '../types/settings';
-import { DEFAULT_CLUSTER_SETTINGS } from '../types/settings';
-import { getPreviewConfig } from '../utils/preview';
-import logger from '../utils/logger';
-import { resolveAssetUrl } from '../utils/url';
+import { STORAGE_KEYS } from "../config/constants";
+import {
+  OpenShiftClient,
+  type OpenShiftPodApi,
+  type PodWatchEvent,
+} from "../services/openshiftClient";
+import type { AgentPod } from "../types/pods";
+import type { ClusterSettings } from "../types/settings";
+import { DEFAULT_CLUSTER_SETTINGS } from "../types/settings";
+import { getPreviewConfig } from "../utils/preview";
+import logger from "../utils/logger";
+import { resolveAssetUrl } from "../utils/url";
 
 const BASE_BADGE: TrelloPowerUp.CardBadge = {
-  text: 'Agents',
-  icon: resolveAssetUrl('/icons/card-agents.svg'),
-  title: 'Card Agents Power-Up installed',
+  text: "Agents",
+  icon: resolveAssetUrl("/icons/card-agents.svg"),
+  title: "Card Agents Power-Up installed",
 };
 
 const BADGE_REFRESH_SECONDS = 15;
 const WATCHER_STALE_MS = 2 * 60 * 1000;
 
 const countRunningPods = (pods: AgentPod[]): number =>
-  pods.reduce((total, pod) => (pod.phase === 'Running' ? total + 1 : total), 0);
+  pods.reduce((total, pod) => (pod.phase === "Running" ? total + 1 : total), 0);
 
 const hashToken = (value: string): string => {
   let hash = 0;
@@ -29,16 +33,20 @@ const hashToken = (value: string): string => {
 };
 
 const loadClusterSettings = async (
-  t: TrelloPowerUp.Client,
+  t: TrelloPowerUp.Client
 ): Promise<{ settings: ClusterSettings; token: string | null }> => {
   const saved =
-    (await t.get<ClusterSettings>('board', 'private', STORAGE_KEYS.clusterConfig)) ?? DEFAULT_CLUSTER_SETTINGS;
+    (await t.get<ClusterSettings>(
+      "board",
+      "private",
+      STORAGE_KEYS.clusterConfig
+    )) ?? DEFAULT_CLUSTER_SETTINGS;
   let token: string | null = null;
   if (saved.tokenSecretId) {
     try {
       token = await t.loadSecret(saved.tokenSecretId);
     } catch (error) {
-      logger.warn('cardBadges: failed to load stored token', error);
+      logger.warn("cardBadges: failed to load stored token", error);
     }
   }
   return { settings: saved, token };
@@ -54,7 +62,7 @@ interface PodRuntimeContext {
 interface RunningPodWatcher {
   cardId: string;
   fingerprint: string;
-  status: 'initializing' | 'ready' | 'error';
+  status: "initializing" | "ready" | "error";
   count: number;
   error?: Error;
   ready: Promise<void>;
@@ -85,7 +93,9 @@ const scheduleCleanup = () => {
   }, WATCHER_STALE_MS);
 };
 
-const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => {
+const createRunningWatcher = (
+  context: PodRuntimeContext
+): RunningPodWatcher => {
   let stopWatch: (() => void) | null = null;
   let disposed = false;
   const pods = new Map<string, AgentPod>();
@@ -94,7 +104,7 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
   const watcher: RunningPodWatcher = {
     cardId: context.cardId,
     fingerprint: context.fingerprint,
-    status: 'initializing',
+    status: "initializing",
     count: 0,
     ready: Promise.resolve(),
     lastAccess: Date.now(),
@@ -116,9 +126,9 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
 
   const applyEvent = (event: PodWatchEvent) => {
     const previous = pods.get(event.pod.id);
-    if (event.type === 'DELETED') {
+    if (event.type === "DELETED") {
       if (previous) {
-        if (previous.phase === 'Running') {
+        if (previous.phase === "Running") {
           runningCount = Math.max(0, runningCount - 1);
         }
         pods.delete(event.pod.id);
@@ -127,22 +137,25 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
       return;
     }
     pods.set(event.pod.id, event.pod);
-    const prevRunning = previous?.phase === 'Running' ? 1 : 0;
-    const nextRunning = event.pod.phase === 'Running' ? 1 : 0;
+    const prevRunning = previous?.phase === "Running" ? 1 : 0;
+    const nextRunning = event.pod.phase === "Running" ? 1 : 0;
     runningCount = Math.max(0, runningCount - prevRunning + nextRunning);
     updateCount(runningCount);
-    watcher.status = 'ready';
+    watcher.status = "ready";
   };
 
   const client = context.clientFactory();
 
   const bootstrap = async () => {
-    const initial = await client.listPods({ cardId: context.cardId, namespace: context.namespace });
+    const initial = await client.listPods({
+      cardId: context.cardId,
+      namespace: context.namespace,
+    });
     pods.clear();
     initial.forEach((pod) => pods.set(pod.id, pod));
     runningCount = countRunningPods(initial);
     updateCount(runningCount);
-    watcher.status = 'ready';
+    watcher.status = "ready";
 
     stopWatch = client.watchPods(
       (event) => {
@@ -155,14 +168,14 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
         cardId: context.cardId,
         namespace: context.namespace,
         onError: (watchError) => {
-          logger.warn('cardBadges: watchPods error', watchError);
+          logger.warn("cardBadges: watchPods error", watchError);
         },
-      },
+      }
     );
   };
 
   watcher.ready = bootstrap().catch((error) => {
-    watcher.status = 'error';
+    watcher.status = "error";
     watcher.error = error as Error;
     throw error;
   });
@@ -170,10 +183,13 @@ const createRunningWatcher = (context: PodRuntimeContext): RunningPodWatcher => 
   return watcher;
 };
 
-const resolvePodContext = async (t: TrelloPowerUp.Client): Promise<PodRuntimeContext | null> => {
+const resolvePodContext = async (
+  t: TrelloPowerUp.Client
+): Promise<PodRuntimeContext | null> => {
   const preview = getPreviewConfig();
   if (preview?.openShiftClient && preview.card?.id) {
-    const namespace = preview.settings?.namespace ?? DEFAULT_CLUSTER_SETTINGS.namespace;
+    const namespace =
+      preview.settings?.namespace ?? DEFAULT_CLUSTER_SETTINGS.namespace;
     return {
       cardId: preview.card.id,
       namespace,
@@ -182,19 +198,21 @@ const resolvePodContext = async (t: TrelloPowerUp.Client): Promise<PodRuntimeCon
     };
   }
 
-  const card = await t.card<{ id: string }>('id');
+  const card = await t.card<{ id: string }>("id");
   if (!card?.id) {
-    logger.warn('cardBadges: Trello card payload missing id');
+    logger.warn("cardBadges: Trello card payload missing id");
     return null;
   }
 
   const { settings, token } = await loadClusterSettings(t);
   if (!settings.clusterUrl || !token) {
-    logger.debug('cardBadges: cluster URL or token missing');
+    logger.debug("cardBadges: cluster URL or token missing");
     return null;
   }
 
-  const fingerprint = `${settings.clusterUrl}|${settings.namespace}|${hashToken(token)}`;
+  const fingerprint = `${settings.clusterUrl}|${settings.namespace}|${hashToken(
+    token
+  )}`;
   return {
     cardId: card.id,
     namespace: settings.namespace,
@@ -210,14 +228,20 @@ const resolvePodContext = async (t: TrelloPowerUp.Client): Promise<PodRuntimeCon
   };
 };
 
-const ensureRunningWatcher = async (t: TrelloPowerUp.Client): Promise<RunningPodWatcher | null> => {
+const ensureRunningWatcher = async (
+  t: TrelloPowerUp.Client
+): Promise<RunningPodWatcher | null> => {
   const context = await resolvePodContext(t);
   if (!context) {
     return null;
   }
 
   let watcher = runningWatchers.get(context.cardId);
-  if (!watcher || watcher.fingerprint !== context.fingerprint || watcher.status === 'error') {
+  if (
+    !watcher ||
+    watcher.fingerprint !== context.fingerprint ||
+    watcher.status === "error"
+  ) {
     watcher?.dispose();
     watcher = createRunningWatcher(context);
     runningWatchers.set(context.cardId, watcher);
@@ -233,15 +257,17 @@ const warmRunningWatcher = async (t: TrelloPowerUp.Client) => {
     const watcher = await ensureRunningWatcher(t);
     await watcher?.ready;
   } catch (error) {
-    logger.debug('cardBadges: warm watcher failed', error);
+    logger.debug("cardBadges: warm watcher failed", error);
   }
 };
 
-const buildRunningBadge = async (t: TrelloPowerUp.Client): Promise<TrelloPowerUp.CardBadge | null> => {
+const buildRunningBadge = async (
+  t: TrelloPowerUp.Client
+): Promise<TrelloPowerUp.CardBadge | null> => {
   const refresh = BADGE_REFRESH_SECONDS;
   const watcher = await ensureRunningWatcher(t);
   if (!watcher) {
-    return { text: '', refresh };
+    return { text: "", refresh };
   }
 
   try {
@@ -250,35 +276,43 @@ const buildRunningBadge = async (t: TrelloPowerUp.Client): Promise<TrelloPowerUp
     // ready rejects on fatal bootstrap; watcher.status will be 'error'
   }
 
-  if (watcher.status === 'error') {
+  if (watcher.status === "error") {
     return {
-      text: 'Pods offline',
-      color: 'red',
-      title: watcher.error?.message ?? 'Unable to reach OpenShift pods API',
+      text: "Pods offline",
+      color: "red",
+      title: watcher.error?.message ?? "Unable to reach OpenShift pods API",
       refresh,
     };
   }
 
   const count = watcher.count;
   if (!Number.isFinite(count) || count <= 0) {
-    return { text: '', refresh };
+    return { text: "", refresh };
   }
 
-  const plural = count === 1 ? '' : 's';
+  const plural = count === 1 ? "" : "s";
   return {
     text: `${count} running pod${plural}`,
-    color: 'green',
-    title: count === 1 ? '1 pod is Running on this card' : `${count} pods are Running on this card`,
+    color: "green",
+    title:
+      count === 1
+        ? "1 pod is Running on this card"
+        : `${count} pods are Running on this card`,
     refresh,
   };
 };
 
-const runningPodsBadge = (t: TrelloPowerUp.Client): TrelloPowerUp.CardBadge => ({
-  title: 'Running pods',
+const runningPodsBadge = (
+  t: TrelloPowerUp.Client
+): TrelloPowerUp.CardBadge => ({
+  title: "Running pods",
   dynamic: () => buildRunningBadge(t),
 });
 
-export const cardBadges: TrelloPowerUp.CapabilityHandler<[TrelloPowerUp.Client], TrelloPowerUp.CardBadge[]> = (t) => {
+export const cardBadges: TrelloPowerUp.CapabilityHandler<
+  [TrelloPowerUp.Client],
+  TrelloPowerUp.CardBadge[]
+> = (t) => {
   void warmRunningWatcher(t);
-  return [BASE_BADGE, runningPodsBadge(t)];
+  return [runningPodsBadge(t)];
 };
