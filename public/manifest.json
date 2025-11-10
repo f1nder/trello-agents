@@ -1,0 +1,31 @@
+{
+  "manifestVersion": 1,
+  "name": "Card Agents Live Roster",
+  "description": "Live OpenShift pod roster + controls embedded directly on Trello cards.",
+  "author": "Trello-Agents",
+  "capabilities": [
+    "card-back-section",
+    "card-buttons",
+    "card-detail-badges",
+    "card-badges",
+    "modals",
+    "authorization-status",
+    "show-authorization",
+    "show-settings"
+  ],
+  "icon": {
+    "url": "__POWERUP_BASE_URL__/icons/card-agents.svg"
+  },
+  "iframeConnectorUrl": "__POWERUP_BASE_URL__/powerup.html",
+  "connectors": [
+    {
+      "title": "Cluster Settings",
+      "description": "Configure OpenShift URL, namespace, token, and SSL options",
+      "url": "__POWERUP_BASE_URL__/settings.html",
+      "icon": {
+        "url": "__POWERUP_BASE_URL__/icons/card-agents.svg"
+      },
+      "target": ["board-settings"]
+    }
+  ]
+}
