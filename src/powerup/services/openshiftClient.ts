@@ -231,10 +231,27 @@ export class OpenShiftClient implements OpenShiftPodApi {
       }
     }
 
-    if (options.owner && options.owner.kind === 'DeploymentConfig') {
-      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${options.owner.name}`;
+    const owner = options.owner;
+    if (!owner) {
+      return;
+    }
+
+    if (owner.kind === 'DeploymentConfig') {
+      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${owner.name}`;
       try {
         await this.request(dcPath, { method: 'DELETE' });
+      } catch (error) {
+        if (!(error instanceof OpenShiftRequestError) || (error.status !== 404 && error.status !== 410)) {
+          throw error;
+        }
+      }
+      return;
+    }
+
+    if (owner.kind === 'Job') {
+      const jobPath = `/apis/batch/v1/namespaces/${namespace}/jobs/${owner.name}`;
+      try {
+        await this.request(jobPath, { method: 'DELETE' });
       } catch (error) {
         if (!(error instanceof OpenShiftRequestError) || (error.status !== 404 && error.status !== 410)) {
           throw error;
