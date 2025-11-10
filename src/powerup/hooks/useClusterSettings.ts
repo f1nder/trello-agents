@@ -3,6 +3,7 @@ import { STORAGE_KEYS } from '../config/constants';
 import type { ClusterSettings } from '../types/settings';
 import { DEFAULT_CLUSTER_SETTINGS } from '../types/settings';
 import { getPreviewConfig } from '../utils/preview';
+import logger from '../utils/logger';
 
 export interface ClusterSettingsResult {
   settings: ClusterSettings;
@@ -22,6 +23,7 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
   useEffect(() => {
     const preview = getPreviewConfig();
     if (preview?.settings) {
+      logger.info('useClusterSettings: using preview settings');
       setSettings(preview.settings);
       setToken(preview.token ?? null);
       setStatus('ready');
@@ -40,25 +42,35 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
 
     const loadSettings = async () => {
       try {
-        const saved = (await trello.get<ClusterSettings>('board', 'private', STORAGE_KEYS.clusterConfig)) ?? DEFAULT_CLUSTER_SETTINGS;
+        logger.info('useClusterSettings: loading saved cluster settings');
+        const saved =
+          (await trello.get<ClusterSettings>('board', 'private', STORAGE_KEYS.clusterConfig)) ?? DEFAULT_CLUSTER_SETTINGS;
         if (cancelled) {
           return;
         }
+        logger.info('useClusterSettings: settings loaded', {
+          hasUrl: Boolean(saved.clusterUrl),
+          namespace: saved.namespace,
+          tokenSecretId: saved.tokenSecretId ? '<present>' : '<missing>',
+        });
         setSettings(saved);
 
         if (saved.tokenSecretId) {
           try {
+            logger.info('useClusterSettings: loading token via secret id');
             const loadedToken = await trello.loadSecret(saved.tokenSecretId);
             if (!cancelled) {
+              logger.info('useClusterSettings: token load result', { present: Boolean(loadedToken) });
               setToken(loadedToken);
             }
           } catch (tokenError) {
-            console.error('[settings] Failed to load stored token', tokenError);
+            logger.warn('useClusterSettings: failed to load stored token', tokenError);
             if (!cancelled) {
               setToken(null);
             }
           }
         } else {
+          logger.debug('useClusterSettings: no tokenSecretId stored');
           setToken(null);
         }
 
@@ -67,6 +79,7 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
         if (cancelled) {
           return;
         }
+        logger.error('useClusterSettings: failed to load settings', loadError);
         setError(loadError as Error);
         setStatus('error');
       }

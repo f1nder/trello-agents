@@ -1,8 +1,8 @@
 /* Minimal Trello Power-Up typings to keep the scaffold strongly typed. */
 declare namespace TrelloPowerUp {
   interface Client {
-    card<T = Record<string, unknown>>(props?: string[]): Promise<T>;
-    board<T = Record<string, unknown>>(props?: string[]): Promise<T>;
+    card<T = Record<string, unknown>>(...props: string[]): Promise<T>;
+    board<T = Record<string, unknown>>(...props: string[]): Promise<T>;
     member<T = Record<string, unknown>>(): Promise<T>;
     signUrl(url: string): string;
     modal(options: {

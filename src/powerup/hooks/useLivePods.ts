@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import type { AgentPod, PodGroup } from '../types/pods';
 import type { OpenShiftPodApi } from '../services/openshiftClient';
+import logger from '../utils/logger';
 
 const groupPods = (pods: AgentPod[]): PodGroup[] => {
   const phaseMap = new Map<PodGroup['phase'], AgentPod[]>();
@@ -65,6 +66,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
 
   useEffect(() => {
     if (!client || !cardId) {
+      logger.debug('useLivePods: inactive', { hasClient: Boolean(client), cardId });
       dispatch({ type: 'reset', pods: [] });
       setStatus('idle');
       setError(null);
@@ -75,6 +77,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
     setStatus('loading');
     setError(null);
     setReconnectAttempts(0);
+    logger.info('useLivePods: start list+watch', { cardId, namespace });
 
     client
       .listPods({ cardId, namespace })
@@ -82,12 +85,14 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
         if (disposed) {
           return;
         }
+        logger.info('useLivePods: initial list complete', { count: initial.length });
         dispatch({ type: 'reset', pods: initial });
       })
       .catch((listError) => {
         if (disposed) {
           return;
         }
+        logger.warn('useLivePods: initial list failed', listError);
         setError(listError as Error);
         setStatus('error');
       });
@@ -100,8 +105,10 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
         setStatus('streaming');
         setLastEventAt(Date.now());
         if (event.type === 'DELETED') {
+          logger.debug('useLivePods: event', { type: event.type, id: event.pod.id, name: event.pod.name });
           dispatch({ type: 'remove', podId: event.pod.id });
         } else {
+          logger.debug('useLivePods: event', { type: event.type, id: event.pod.id, name: event.pod.name });
           dispatch({ type: 'upsert', pod: event.pod });
         }
       },
@@ -112,18 +119,21 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
           if (disposed) {
             return;
           }
+          logger.info('useLivePods: connection state', state);
           setStatus(state);
         },
         onReconnect: (attempt) => {
           if (disposed) {
             return;
           }
+          logger.warn('useLivePods: reconnect', { attempt });
           setReconnectAttempts(attempt);
         },
         onError: (watchError) => {
           if (disposed) {
             return;
           }
+          logger.error('useLivePods: watch error', watchError);
           setError(watchError);
           setStatus('error');
         },
@@ -132,6 +142,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
 
     return () => {
       disposed = true;
+      logger.debug('useLivePods: stop watch');
       stopWatch();
     };
   }, [cardId, client, namespace]);

@@ -1,4 +1,5 @@
 import type { AgentPod, PodOwnerReference, PodPhase } from '../types/pods';
+import logger from '../utils/logger';
 
 export interface OpenShiftClientConfig {
   baseUrl: string;
@@ -160,9 +161,12 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   async listPods(params: ListPodsParams = {}): Promise<AgentPod[]> {
     const url = this.buildPodUrl({ ...params, watch: false });
+    logger.debug('[openshift] listPods', { url });
     const response = await this.request(url, { method: 'GET' });
     const payload = (await response.json()) as KubernetesListResponse<KubernetesPod>;
-    return (payload.items ?? []).map(mapPodResource);
+    const result = (payload.items ?? []).map(mapPodResource);
+    logger.debug('[openshift] listPods result', { count: result.length });
+    return result;
   }
 
   watchPods(handler: PodWatchHandler, options: WatchPodsOptions = {}): () => void {
@@ -256,6 +260,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   private async consumeWatchStream(handler: PodWatchHandler, signal: AbortSignal, options: WatchPodsOptions): Promise<void> {
     const url = this.buildPodUrl({ ...options, watch: true });
+    logger.debug('[openshift] watchPods connect', { url });
     const response = await this.request(url, { method: 'GET', signal });
     if (!response.body) {
       throw new Error('Streaming not supported by fetch implementation');
@@ -293,7 +298,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
           pod: mapPodResource(payload.object),
         });
       } catch (error) {
-        console.warn('[openshift] Unable to parse watch payload', error);
+        logger.warn('[openshift] Unable to parse watch payload', error);
       }
     }
     return remainder;
@@ -315,6 +320,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   private async request(path: string, init: RequestInit = {}): Promise<Response> {
     const headers = this.mergeHeaders(init.headers);
+    logger.debug('[openshift] request', { path, method: init.method ?? 'GET' });
     const response = await this.fetchImpl(path, {
       ...init,
       headers,
@@ -346,6 +352,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
       payload = undefined;
     }
     const message = `OpenShift request failed: ${response.status} ${response.statusText}`;
+    logger.warn('[openshift] request failed', { status: response.status, statusText: response.statusText, payload });
     return new OpenShiftRequestError(message, response.status, payload);
   }
 }
