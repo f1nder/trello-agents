@@ -136,13 +136,14 @@ const previewClient: TrelloPowerUp.Client = {
     if ("type" in options && options.type === "confirm") {
       const confirmed = window.confirm(options.message);
       if (confirmed) {
-        await options.onConfirm?.(this, options);
+        await options.onConfirm?.(this, { result: "confirm" });
       } else {
-        await options.onCancel?.(this, options);
+        await options.onCancel?.(this, { result: "cancel" });
       }
       return;
     }
-    window.open(options.url, "_blank", "noopener");
+    const iframeOptions = options as TrelloPowerUp.PopupIframeOptions;
+    window.open(iframeOptions.url, "_blank", "noopener");
   },
   async closePopup() {
     // no-op for preview harness
