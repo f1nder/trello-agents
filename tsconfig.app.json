@@ -16,7 +16,7 @@
     "noEmit": false,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client", "./src/types/trello-power-up"]
   },
   "include": ["src"],
   "references": []

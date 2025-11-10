@@ -20,6 +20,8 @@ declare namespace TrelloPowerUp {
     remove(scope: 'card' | 'board', visibility: 'private' | 'shared', key: string): Promise<void>;
     storeSecret(key: string, value: string): Promise<string>;
     loadSecret(key: string): Promise<string | null>;
+    arg<T = unknown>(key: string): T | undefined;
+    navigate(options: { url: string }): Promise<void>;
   }
 
   type CapabilityHandler<T extends unknown[] = unknown[], R = unknown> = (...args: T) => R;

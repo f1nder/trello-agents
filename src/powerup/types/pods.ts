@@ -1,4 +1,10 @@
-export type PodPhase = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown';
+export type PodPhase = 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown' | 'Terminating';
+
+export interface PodOwnerReference {
+  kind: string;
+  name: string;
+  uid?: string;
+}
 
 export interface AgentPod {
   id: string;
@@ -9,6 +15,9 @@ export interface AgentPod {
   startedAt: string;
   containers: string[];
   lastEvent?: string;
+  nodeName?: string;
+  restarts?: number;
+  owner?: PodOwnerReference;
 }
 
 export interface PodGroup {

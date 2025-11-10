@@ -1,40 +1,37 @@
 import type { AgentPod } from '../types/pods';
-import { resolveAssetUrl } from '../utils/url';
 
 interface PodActionsProps {
   pod: AgentPod;
-  trello: TrelloPowerUp.Client | null;
+  onStop?: (pod: AgentPod) => Promise<void> | void;
+  onStreamLogs?: (pod: AgentPod) => Promise<void> | void;
+  disabled?: boolean;
+  isStopping?: boolean;
 }
 
-const PodActions = ({ pod, trello }: PodActionsProps) => {
-  const disabled = !trello;
+const PodActions = ({ pod, onStop, onStreamLogs, disabled = false, isStopping = false }: PodActionsProps) => {
+  const stopDisabled = disabled || !onStop || isStopping;
+  const logsDisabled = disabled || !onStreamLogs;
 
   const stopPod = async () => {
-    if (!trello) {
+    if (stopDisabled || !onStop) {
       return;
     }
-    await trello.alert({ message: `Stop Pod invoked for ${pod.name}`, display: 'info' });
-    trello.track('stop-pod', { pod: pod.name });
+    await onStop(pod);
   };
 
   const openLogs = async () => {
-    if (!trello) {
+    if (logsDisabled || !onStreamLogs) {
       return;
     }
-    await trello.modal({
-      url: trello.signUrl(resolveAssetUrl('/logs.html')),
-      title: `Logs · ${pod.name}`,
-      height: 720,
-    });
-    trello.track('stream-logs', { pod: pod.name });
+    await onStreamLogs(pod);
   };
 
   return (
     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
-      <button type="button" disabled={disabled} onClick={stopPod}>
-        Stop pod
+      <button type="button" disabled={stopDisabled} onClick={stopPod}>
+        {isStopping ? 'Stopping…' : 'Stop pod'}
       </button>
-      <button type="button" disabled={disabled} onClick={openLogs}>
+      <button type="button" disabled={logsDisabled} onClick={openLogs}>
         Stream logs
       </button>
     </div>

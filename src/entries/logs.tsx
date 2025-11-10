@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import LogStreamPlaceholder from '../powerup/components/LogStreamPlaceholder';
+import LogStreamModal from '../powerup/components/LogStreamModal';
 
 ReactDOM.createRoot(document.getElementById('logs-root') as HTMLElement).render(
   <React.StrictMode>
-    <LogStreamPlaceholder />
+    <LogStreamModal />
   </React.StrictMode>,
 );

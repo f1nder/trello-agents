@@ -1,11 +1,18 @@
-import type { AgentPod } from '../types/pods';
+import type { AgentPod, PodOwnerReference, PodPhase } from '../types/pods';
 
 export interface OpenShiftClientConfig {
   baseUrl: string;
   namespace: string;
-  token?: string;
+  token?: string | null;
   caBundle?: string;
   ignoreSsl?: boolean;
+}
+
+export interface ListPodsParams {
+  cardId?: string;
+  namespace?: string;
+  labelSelector?: string;
+  fieldSelector?: string;
 }
 
 export interface PodWatchEvent {
@@ -15,58 +22,372 @@ export interface PodWatchEvent {
 
 export type PodWatchHandler = (event: PodWatchEvent) => void;
 
+export interface WatchPodsOptions extends ListPodsParams {
+  signal?: AbortSignal;
+  /**
+   * Hook invoked whenever the underlying stream transitions to a new connection state.
+   */
+  onConnectionStateChange?: (state: 'connecting' | 'streaming') => void;
+  /**
+   * Hook invoked just before each retry attempt (1-indexed).
+   */
+  onReconnect?: (attempt: number) => void;
+  onError?: (error: Error) => void;
+  /**
+   * Base delay used for exponential backoff between retries (ms).
+   * Defaults to 750 ms.
+   */
+  backoffMs?: number;
+}
+
+export interface StopPodOptions {
+  namespace?: string;
+  owner?: PodOwnerReference | null;
+}
+
+export interface StreamLogsOptions {
+  namespace?: string;
+  container?: string;
+  signal?: AbortSignal;
+}
+
+const textDecoder = new TextDecoder();
+
+const waitFor = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+
+const coercePhase = (phase?: string): PodPhase => {
+  if (!phase) {
+    return 'Unknown';
+  }
+  if (phase === 'Succeeded' || phase === 'Failed' || phase === 'Running' || phase === 'Pending' || phase === 'Unknown') {
+    return phase;
+  }
+  if (phase === 'Terminating') {
+    return 'Terminating';
+  }
+  return 'Unknown';
+};
+
+const mapPodResource = (resource: KubernetesPod): AgentPod => {
+  const containers = resource.spec?.containers?.map((container) => container.name) ?? [];
+  const ownerRef = resource.metadata.ownerReferences?.[0];
+  const readyCondition = resource.status?.conditions?.find((condition) => condition.type === 'Ready');
+  const lastEvent = readyCondition?.message ?? resource.status?.message ?? ownerRef?.kind;
+  const fallbackId = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  return {
+    id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
+    name: resource.metadata.name ?? 'unknown',
+    phase: coercePhase(resource.status?.phase),
+    cardId: resource.metadata.labels?.trelloCardId ?? '',
+    namespace: resource.metadata.namespace ?? '',
+    startedAt: resource.status?.startTime ?? new Date().toISOString(),
+    containers,
+    lastEvent,
+    nodeName: resource.spec?.nodeName,
+    restarts: resource.status?.containerStatuses?.reduce((sum, status) => sum + (status.restartCount ?? 0), 0),
+    owner: ownerRef
+      ? {
+          kind: ownerRef.kind ?? 'Unknown',
+          name: ownerRef.name ?? 'unknown',
+          uid: ownerRef.uid ?? undefined,
+        }
+      : undefined,
+  };
+};
+
+const buildLabelSelector = (cardId?: string, extraSelector?: string) => {
+  const selectors: string[] = [];
+  if (cardId) {
+    selectors.push(`trelloCardId=${cardId}`);
+  }
+  if (extraSelector) {
+    selectors.push(extraSelector);
+  }
+  return selectors.join(',');
+};
+
+const normalizeBaseUrl = (value: string) => {
+  if (!value.endsWith('/')) {
+    return `${value}/`;
+  }
+  return value;
+};
+
+export class OpenShiftRequestError extends Error {
+  constructor(message: string, public readonly status: number, public readonly payload?: string) {
+    super(message);
+    this.name = 'OpenShiftRequestError';
+  }
+}
+
 /**
- * Placeholder OpenShift client. Future iterations will replace these stubs with
- * real fetch/stream logic targeting OpenShift 3.11 watch + log APIs.
+ * Minimal fetch-based OpenShift API client targeting the subset of
+ * endpoints required by the Card Agents roster.
  */
 export class OpenShiftClient {
-  constructor(private readonly config: OpenShiftClientConfig) {}
+  private readonly fetchImpl: typeof fetch;
+  private readonly baseUrl: string;
 
-  async listPods(): Promise<AgentPod[]> {
-    console.info('[openshift] listPods() stub invoked', this.config);
-    return [];
+  constructor(private readonly config: OpenShiftClientConfig, deps?: { fetchImpl?: typeof fetch }) {
+    this.fetchImpl = deps?.fetchImpl ?? (globalThis.fetch?.bind(globalThis) as typeof fetch);
+    if (!this.fetchImpl) {
+      throw new Error('OpenShiftClient requires global fetch support');
+    }
+    this.baseUrl = normalizeBaseUrl(config.baseUrl);
   }
 
-  watchPods(handler: PodWatchHandler): () => void {
-    console.info('[openshift] watchPods() stub invoked', this.config);
-    let closed = false;
+  async listPods(params: ListPodsParams = {}): Promise<AgentPod[]> {
+    const url = this.buildPodUrl({ ...params, watch: false });
+    const response = await this.request(url, { method: 'GET' });
+    const payload = (await response.json()) as KubernetesListResponse<KubernetesPod>;
+    return (payload.items ?? []).map(mapPodResource);
+  }
 
-    queueMicrotask(() => {
-      if (closed) {
-        return;
+  watchPods(handler: PodWatchHandler, options: WatchPodsOptions = {}): () => void {
+    const controller = new AbortController();
+    const externalSignal = options.signal;
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
       }
-      handler({
-        type: 'ADDED',
-        pod: {
-          id: 'stub-pod',
-          name: 'card-agent-stub',
-          phase: 'Running',
-          cardId: 'STUB',
-          namespace: this.config.namespace,
-          startedAt: new Date().toISOString(),
-          containers: ['agent'],
-          lastEvent: 'bootstrap',
-        },
-      });
-    });
+    }
+
+    let stopped = false;
+    let reconnectAttempt = 0;
+
+    const loop = async () => {
+      while (!stopped && !controller.signal.aborted) {
+        options.onConnectionStateChange?.('connecting');
+        try {
+          await this.consumeWatchStream(handler, controller.signal, options);
+          reconnectAttempt = 0;
+        } catch (error) {
+          if (controller.signal.aborted || stopped) {
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+              options.onError?.(error as Error);
+            }
+            return;
+          }
+          reconnectAttempt += 1;
+          options.onError?.(error as Error);
+          options.onReconnect?.(reconnectAttempt);
+          const backoff = Math.min(30000, (options.backoffMs ?? 750) * (2 ** (reconnectAttempt - 1)));
+          try {
+            await waitFor(backoff, controller.signal);
+          } catch (abortError) {
+            if (!(abortError instanceof DOMException && abortError.name === 'AbortError')) {
+              options.onError?.(abortError as Error);
+            }
+            return;
+          }
+        }
+      }
+    };
+
+    loop().catch((error) => options.onError?.(error as Error));
 
     return () => {
-      closed = true;
+      stopped = true;
+      controller.abort();
     };
   }
 
-  async stopPod(podName: string): Promise<void> {
-    console.info(`[openshift] stopPod(${podName}) stub invoked`);
+  async stopPod(podName: string, options: StopPodOptions = {}): Promise<void> {
+    const namespace = options.namespace ?? this.config.namespace;
+    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
+    try {
+      await this.request(podPath, { method: 'DELETE' });
+    } catch (error) {
+      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
+        throw error;
+      }
+    }
+
+    if (options.owner && options.owner.kind === 'DeploymentConfig') {
+      const dcPath = `/apis/apps.openshift.io/v1/namespaces/${namespace}/deploymentconfigs/${options.owner.name}`;
+      try {
+        await this.request(dcPath, { method: 'DELETE' });
+      } catch (error) {
+        if (!(error instanceof OpenShiftRequestError) || (error.status !== 404 && error.status !== 410)) {
+          throw error;
+        }
+      }
+    }
   }
 
-  streamLogs(podName: string, container?: string): ReadableStreamDefaultReader<string> {
-    console.info(`[openshift] streamLogs(${podName}, ${container ?? 'default'}) stub invoked`);
-    const stream = new ReadableStream<string>({
-      start(controller) {
-        controller.enqueue(`[stub log] Connected to ${podName}`);
-        controller.close();
-      },
-    });
-    return stream.getReader();
+  async streamLogs(podName: string, options: StreamLogsOptions = {}): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+    const namespace = options.namespace ?? this.config.namespace;
+    const url = new URL(`/api/v1/namespaces/${namespace}/pods/${podName}/log`, this.baseUrl);
+    url.searchParams.set('follow', 'true');
+    url.searchParams.set('timestamps', 'true');
+    if (options.container) {
+      url.searchParams.set('container', options.container);
+    }
+    const response = await this.request(url.toString(), { method: 'GET', signal: options.signal, headers: { Accept: 'text/plain' } });
+    if (!response.body) {
+      throw new Error('Log streaming is unavailable in this environment');
+    }
+    return response.body.getReader();
   }
+
+  private async consumeWatchStream(handler: PodWatchHandler, signal: AbortSignal, options: WatchPodsOptions): Promise<void> {
+    const url = this.buildPodUrl({ ...options, watch: true });
+    const response = await this.request(url, { method: 'GET', signal });
+    if (!response.body) {
+      throw new Error('Streaming not supported by fetch implementation');
+    }
+
+    options.onConnectionStateChange?.('streaming');
+
+    const reader = response.body.getReader();
+    let buffered = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffered += textDecoder.decode(value, { stream: true });
+      buffered = this.flushBuffer(buffered, handler);
+    }
+  }
+
+  private flushBuffer(buffered: string, handler: PodWatchHandler): string {
+    const lines = buffered.split('\n');
+    const remainder = lines.pop() ?? '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+      try {
+        const payload = JSON.parse(trimmed) as KubernetesWatchEvent;
+        if (!payload.object) {
+          continue;
+        }
+        handler({
+          type: payload.type,
+          pod: mapPodResource(payload.object),
+        });
+      } catch (error) {
+        console.warn('[openshift] Unable to parse watch payload', error);
+      }
+    }
+    return remainder;
+  }
+
+  private buildPodUrl(params: ListPodsParams & { watch: boolean }): string {
+    const namespace = params.namespace ?? this.config.namespace;
+    const url = new URL(`/api/v1/namespaces/${namespace}/pods`, this.baseUrl);
+    url.searchParams.set('fieldSelector', params.fieldSelector ?? 'status.phase!=Failed');
+    if (params.watch) {
+      url.searchParams.set('watch', 'true');
+    }
+    const labelSelector = buildLabelSelector(params.cardId, params.labelSelector);
+    if (labelSelector) {
+      url.searchParams.set('labelSelector', labelSelector);
+    }
+    return url.toString();
+  }
+
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const headers = this.mergeHeaders(init.headers);
+    const response = await this.fetchImpl(path, {
+      ...init,
+      headers,
+      credentials: 'omit',
+      mode: 'cors',
+    });
+    if (!response.ok) {
+      throw await this.toRequestError(response);
+    }
+    return response;
+  }
+
+  private mergeHeaders(headers?: HeadersInit): Headers {
+    const merged = new Headers(headers ?? {});
+    if (!merged.has('Accept')) {
+      merged.set('Accept', 'application/json');
+    }
+    if (this.config.token) {
+      merged.set('Authorization', `Bearer ${this.config.token}`);
+    }
+    return merged;
+  }
+
+  private async toRequestError(response: Response): Promise<OpenShiftRequestError> {
+    let payload: string | undefined;
+    try {
+      payload = await response.text();
+    } catch {
+      payload = undefined;
+    }
+    const message = `OpenShift request failed: ${response.status} ${response.statusText}`;
+    return new OpenShiftRequestError(message, response.status, payload);
+  }
+}
+
+interface KubernetesOwnerReference {
+  kind?: string;
+  name?: string;
+  uid?: string;
+}
+
+interface KubernetesMetadata {
+  name?: string;
+  namespace?: string;
+  uid?: string;
+  labels?: Record<string, string>;
+  ownerReferences?: KubernetesOwnerReference[];
+}
+
+interface KubernetesCondition {
+  type?: string;
+  status?: string;
+  message?: string;
+  reason?: string;
+}
+
+interface KubernetesPodStatus {
+  phase?: string;
+  startTime?: string;
+  message?: string;
+  conditions?: KubernetesCondition[];
+  containerStatuses?: { name?: string; restartCount?: number }[];
+}
+
+interface KubernetesPodSpec {
+  containers?: { name: string }[];
+  nodeName?: string;
+}
+
+interface KubernetesPod {
+  metadata: KubernetesMetadata;
+  status?: KubernetesPodStatus;
+  spec?: KubernetesPodSpec;
+}
+
+interface KubernetesListResponse<T> {
+  items?: T[];
+}
+
+interface KubernetesWatchEvent {
+  type: PodWatchEvent['type'];
+  object: KubernetesPod;
 }
