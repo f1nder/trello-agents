@@ -5,6 +5,7 @@ import { usePowerUpClient } from '../powerup/hooks/usePowerUpClient';
 import { STORAGE_KEYS } from '../powerup/config/constants';
 import '../styles/index.css';
 import '../pages/InnerPage.css';
+import { trackEvent } from '../powerup/utils/analytics';
 
 const BoardSettingsPage = () => {
   const trello = usePowerUpClient();
@@ -53,7 +54,7 @@ const BoardSettingsPage = () => {
     setFormState((prev) => ({ ...prev, tokenSecretId: nextTokenSecretId }));
     setHasStoredToken(Boolean(nextTokenSecretId));
     setStatus('loaded');
-    trello.track('settings-save');
+    trackEvent(trello, 'settings-save');
   };
 
   return (

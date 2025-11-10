@@ -1,10 +1,13 @@
-import { resolveAssetUrl } from '../utils/url';
+import { resolveAssetUrl } from "../utils/url";
 
-export const showSettings: TrelloPowerUp.CapabilityHandler<[TrelloPowerUp.Client], Promise<void>> = async (t) => {
+export const showSettings: TrelloPowerUp.CapabilityHandler<
+  [TrelloPowerUp.Client],
+  Promise<void>
+> = async (t) => {
   // Follow Trello docs: use a popup for show-settings from the Power-Ups menu.
-  await t.popup({
-    title: 'Cluster Settings',
-    url: t.signUrl(resolveAssetUrl('/settings.html')),
+  await t.modal({
+    title: "Cluster Settings",
+    url: t.signUrl(resolveAssetUrl("/settings.html")),
     height: 260, // popup can be resized later by Trello
   });
 };

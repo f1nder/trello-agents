@@ -13,6 +13,7 @@ import { useAppliedTrelloTheme } from '../hooks/useAppliedTrelloTheme';
 import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
+import { trackEvent } from '../utils/analytics';
 
 type StatusKind = 'running' | 'pending' | 'complete' | 'error';
 
@@ -148,7 +149,7 @@ const CardBackShell = () => {
     livePods.mutate.remove(pod.id);
     try {
       await openShiftClient.stopPod(pod.name, { namespace: pod.namespace, owner: pod.owner ?? null });
-      trello.track('stop-pod', { pod: pod.name, namespace: pod.namespace });
+      trackEvent(trello, 'stop-pod', { pod: pod.name, namespace: pod.namespace });
       await trello.alert({ message: `Stop requested for ${pod.name}`, display: 'info' });
     } catch (error) {
       livePods.mutate.upsert(previousSnapshot);
@@ -165,7 +166,7 @@ const CardBackShell = () => {
     if (!trello) {
       return;
     }
-    trello.track('stream-logs', { pod: pod.name, namespace: pod.namespace });
+    trackEvent(trello, 'stream-logs', { pod: pod.name, namespace: pod.namespace });
     await trello.modal({
       url: trello.signUrl(resolveAssetUrl('/logs.html')),
       title: `Logs · ${pod.name}`,
@@ -232,7 +233,7 @@ const CardBackShell = () => {
               type="button"
               onClick={async () => {
                 try {
-                  trello.track('open-settings-from-card');
+                  trackEvent(trello, 'open-settings-from-card');
                   await trello.modal({
                     url: trello.signUrl(resolveAssetUrl('/settings.html')),
                     title: 'Cluster Settings',
