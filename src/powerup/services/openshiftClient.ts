@@ -321,12 +321,26 @@ export class OpenShiftClient implements OpenShiftPodApi {
   private async request(path: string, init: RequestInit = {}): Promise<Response> {
     const headers = this.mergeHeaders(init.headers);
     logger.debug('[openshift] request', { path, method: init.method ?? 'GET' });
-    const response = await this.fetchImpl(path, {
-      ...init,
-      headers,
-      credentials: 'omit',
-      mode: 'cors',
-    });
+    let response: Response;
+    try {
+      response = await this.fetchImpl(path, {
+        ...init,
+        headers,
+        credentials: 'omit',
+        mode: 'cors',
+      });
+    } catch (err) {
+      // Browsers throw TypeError on CORS/preflight/network failures before any response.
+      if (err instanceof TypeError) {
+        logger.warn('[openshift] network/CORS failure', { message: err.message });
+        throw new OpenShiftRequestError(
+          'Network or CORS/preflight failure (browser blocked request)',
+          0,
+          err.message,
+        );
+      }
+      throw err as Error;
+    }
     if (!response.ok) {
       throw await this.toRequestError(response);
     }

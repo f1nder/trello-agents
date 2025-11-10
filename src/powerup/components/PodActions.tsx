@@ -7,6 +7,7 @@ interface PodActionsProps {
   disabled?: boolean;
   isStopping?: boolean;
   variant?: "default" | "compact";
+  showStop?: boolean;
 }
 
 const IconStop = () => (
@@ -55,6 +56,7 @@ const PodActions = ({
   disabled = false,
   isStopping = false,
   variant = "default",
+  showStop = true,
 }: PodActionsProps) => {
   const stopDisabled = disabled || !onStop || isStopping;
   const logsDisabled = disabled || !onStreamLogs;
@@ -76,20 +78,22 @@ const PodActions = ({
   if (variant === "compact") {
     return (
       <div style={{ display: "flex", gap: "0.35rem" }}>
-        <button
-          type="button"
-          className="icon-button"
-          disabled={stopDisabled}
-          onClick={stopPod}
-          aria-label={isStopping ? "Stopping pod" : "Stop pod"}
-          title="Stop pod"
-        >
-          {isStopping ? (
-            <span className="icon-button__spinner" aria-hidden="true" />
-          ) : (
-            <IconStop />
-          )}
-        </button>
+        {showStop && (
+          <button
+            type="button"
+            className="icon-button"
+            disabled={stopDisabled}
+            onClick={stopPod}
+            aria-label={isStopping ? "Stopping pod" : "Stop pod"}
+            title="Stop pod"
+          >
+            {isStopping ? (
+              <span className="icon-button__spinner" aria-hidden="true" />
+            ) : (
+              <IconStop />
+            )}
+          </button>
+        )}
         <button
           type="button"
           className="icon-button"
@@ -106,9 +110,11 @@ const PodActions = ({
 
   return (
     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem" }}>
-      <button type="button" disabled={stopDisabled} onClick={stopPod}>
-        {isStopping ? "Stopping…" : "Stop pod"}
-      </button>
+      {showStop && (
+        <button type="button" disabled={stopDisabled} onClick={stopPod}>
+          {isStopping ? "Stopping…" : "Stop pod"}
+        </button>
+      )}
       <button type="button" disabled={logsDisabled} onClick={openLogs}>
         Stream logs
       </button>
