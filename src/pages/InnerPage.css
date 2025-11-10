@@ -150,50 +150,81 @@
   justify-content: flex-end;
 }
 
-.status-pill {
+.pod-row__status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  min-height: 40px;
+}
+
+.status-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ca-icon-button-border);
+  background: var(--ca-surface-muted);
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: lowercase;
-  letter-spacing: 0.04em;
+  justify-content: center;
+  position: relative;
 }
 
-.status-pill.status-running {
-  background: var(--ca-status-running-bg);
-  color: var(--ca-status-running-text);
-}
-
-.status-pill.status-pending,
-.status-pill.status-initialize,
-.status-pill.status-initializing {
-  background: var(--ca-status-pending-bg);
-  color: var(--ca-status-pending-text);
-}
-
-.status-pill.status-completed,
-.status-pill.status-succeeded {
-  background: var(--ca-status-completed-bg);
-  color: var(--ca-status-completed-text);
-}
-
-.status-pill.status-failed,
-.status-pill.status-unknown,
-.status-pill.status-terminating {
-  background: var(--ca-status-failed-bg);
-  color: var(--ca-status-failed-text);
-}
-
-.status-spinner {
-  width: 0.55rem;
-  height: 0.55rem;
+.status-indicator__spinner {
+  width: 14px;
+  height: 14px;
   border: 2px solid var(--ca-spinner-track);
   border-top-color: var(--ca-spinner-fill);
   border-radius: 999px;
-  animation: pod-spin 0.7s linear infinite;
+  animation: pod-spin 0.75s linear infinite;
+}
+
+.status-indicator__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.status-indicator__dot--complete {
+  background: var(--ca-status-completed-text);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+}
+
+.status-indicator__dot--pending {
+  background: var(--ca-status-pending-text);
+  opacity: 0.8;
+  animation: status-pending 1.6s ease-in-out infinite;
+}
+
+.status-indicator__dot--error {
+  background: var(--ca-status-failed-text);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@keyframes status-pending {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
 }
 
 @keyframes pod-spin {
@@ -205,7 +236,7 @@
 .icon-button {
   width: 32px;
   height: 32px;
-  border-radius: 999px;
+  border-radius: 0.35rem;
   border: 1px solid var(--ca-icon-button-border);
   background: var(--ca-icon-button-bg);
   color: var(--ca-text);

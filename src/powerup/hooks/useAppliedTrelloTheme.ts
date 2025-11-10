@@ -9,6 +9,7 @@ export const useAppliedTrelloTheme = (trello: TrelloPowerUp.Client | null) => {
       return;
     }
     document.documentElement.setAttribute('data-trello-theme', theme);
+    document.body?.setAttribute('data-trello-theme', theme);
   }, [theme]);
 
   return theme;

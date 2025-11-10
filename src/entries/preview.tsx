@@ -190,6 +190,10 @@ const PreviewApp = () => {
 
   useEffect(() => {
     previewConfig.theme = theme;
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-trello-theme", theme);
+      document.body?.setAttribute("data-trello-theme", theme);
+    }
     window.dispatchEvent(
       new CustomEvent<TrelloTheme>(PREVIEW_THEME_EVENT, { detail: theme })
     );
