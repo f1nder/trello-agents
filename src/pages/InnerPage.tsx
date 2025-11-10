@@ -18,7 +18,7 @@ const InnerPage = () => {
         </p>
         <button
           type="button"
-          onClick={() => window.open('/preview.html', '_blank', 'noopener')}
+          onClick={() => window.open('./preview.html', '_blank', 'noopener')}
         >
           Open Card Agents Prototype
         </button>
