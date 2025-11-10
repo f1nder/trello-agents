@@ -6,7 +6,7 @@ type ThemeAwareClient = TrelloPowerUp.Client & {
   render?: (callback: () => void | Promise<void>) => void;
 };
 
-const coerceTheme = (value?: string | null): TrelloTheme => (value === 'dark' ? 'dark' : 'light');
+const coerceTheme = (value?: string | null): TrelloTheme => (value === 'light' ? 'light' : 'dark');
 
 export const useTrelloTheme = (trello: TrelloPowerUp.Client | null) => {
   const previewConfig = getPreviewConfig();

@@ -56,6 +56,54 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       nodeName: 'automation-node-c',
       restarts: 0,
     },
+    {
+      id: 'preview-succeeded-1',
+      name: 'card-agent-completed-1',
+      phase: 'Succeeded',
+      cardId,
+      namespace,
+      startedAt: new Date(now - 1000 * 60 * 15).toISOString(),
+      containers: ['agent'],
+      lastEvent: 'Completed successfully',
+      nodeName: 'automation-node-d',
+      restarts: 0,
+    },
+    {
+      id: 'preview-succeeded-2',
+      name: 'card-agent-completed-2',
+      phase: 'Succeeded',
+      cardId,
+      namespace,
+      startedAt: new Date(now - 1000 * 60 * 20).toISOString(),
+      containers: ['agent'],
+      lastEvent: 'Job finished',
+      nodeName: 'automation-node-e',
+      restarts: 1,
+    },
+    {
+      id: 'preview-failed-1',
+      name: 'card-agent-failed-1',
+      phase: 'Failed',
+      cardId,
+      namespace,
+      startedAt: new Date(now - 1000 * 60 * 12).toISOString(),
+      containers: ['agent'],
+      lastEvent: 'Error: exit code 1',
+      nodeName: 'automation-node-f',
+      restarts: 2,
+    },
+    {
+      id: 'preview-failed-2',
+      name: 'card-agent-failed-2',
+      phase: 'Failed',
+      cardId,
+      namespace,
+      startedAt: new Date(now - 1000 * 60 * 18).toISOString(),
+      containers: ['agent'],
+      lastEvent: 'CrashLoopBackOff',
+      nodeName: 'automation-node-g',
+      restarts: 0,
+    },
   ];
 };
 
@@ -152,7 +200,7 @@ export class MockOpenShiftClient implements OpenShiftPodApi {
 
     const index = Math.floor(Math.random() * this.pods.length);
     const pod = { ...this.pods[index] };
-    const phases: AgentPod['phase'][] = ['Running', 'Pending', 'Running'];
+    const phases: AgentPod['phase'][] = ['Running', 'Pending', 'Succeeded', 'Failed'];
     pod.phase = phases[Math.floor(Math.random() * phases.length)];
     pod.lastEvent = `Heartbeat ${new Date().toLocaleTimeString()}`;
     this.pods[index] = pod;

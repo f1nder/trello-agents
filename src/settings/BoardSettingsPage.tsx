@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
 import { DEFAULT_CLUSTER_SETTINGS, type ClusterSettings } from '../powerup/types/settings';
+import { useAppliedTrelloTheme } from '../powerup/hooks/useAppliedTrelloTheme';
 import { usePowerUpClient } from '../powerup/hooks/usePowerUpClient';
 import { STORAGE_KEYS } from '../powerup/config/constants';
 import '../styles/index.css';
@@ -7,6 +8,7 @@ import '../pages/InnerPage.css';
 
 const BoardSettingsPage = () => {
   const trello = usePowerUpClient();
+  const theme = useAppliedTrelloTheme(trello);
   const [formState, setFormState] = useState<ClusterSettings>(DEFAULT_CLUSTER_SETTINGS);
   const [tokenInput, setTokenInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'loaded'>('idle');
@@ -55,7 +57,7 @@ const BoardSettingsPage = () => {
   };
 
   return (
-    <main className="inner-page" style={{ maxWidth: '640px' }}>
+    <main className="inner-page" style={{ maxWidth: '640px' }} data-theme={theme}>
       <header>
         <p className="eyebrow">Board-level settings</p>
         <h1>Cluster connection</h1>

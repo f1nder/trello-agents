@@ -160,11 +160,7 @@ window.__CARD_AGENTS_PREVIEW__ = previewConfig;
 const PreviewApp = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const resolverRef = useRef<(() => void) | null>(null);
-  const systemPrefersDark =
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-  const seedTheme: TrelloTheme =
-    previewConfig.theme ?? (systemPrefersDark ? "dark" : "light");
+  const seedTheme: TrelloTheme = previewConfig.theme ?? "dark";
   if (!previewConfig.theme) {
     previewConfig.theme = seedTheme;
   }
@@ -217,11 +213,11 @@ const PreviewApp = () => {
         </p>
         <div className="theme-toggle">
           <span className="theme-toggle__label">Theme</span>
-          <div
-            className="theme-toggle__group"
-            role="group"
-            aria-label="Toggle Trello theme"
-          >
+        <div
+          className="theme-toggle__group"
+          role="group"
+          aria-label="Toggle Trello theme"
+        >
             <button
               type="button"
               className={`theme-toggle__button${
@@ -243,6 +239,19 @@ const PreviewApp = () => {
               Dark
             </button>
           </div>
+        </div>
+        <div className="preview-hero__settings">
+          <p>
+            Visit the settings page to explore the configuration UI without Trello.
+          </p>
+          <a
+            className="preview-hero__settings-link"
+            href="./settings.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Settings page
+          </a>
         </div>
       </section>
       <CardBackShell />
