@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
-
-export interface CardMetadata {
-  id: string;
-  shortLink?: string;
-  labels?: { id: string; name: string; color: string }[];
-}
+import type { CardMetadata } from '../types/trello';
+import { getPreviewConfig } from '../utils/preview';
 
 export interface CardMetadataResult {
   card: CardMetadata | null;
@@ -18,6 +14,13 @@ export const useCardMetadata = (trello: TrelloPowerUp.Client | null): CardMetada
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    const preview = getPreviewConfig();
+    if (preview?.card) {
+      setCard(preview.card);
+      setStatus('ready');
+      return;
+    }
+
     if (!trello) {
       setStatus('idle');
       setCard(null);

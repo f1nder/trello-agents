@@ -3,6 +3,8 @@ import { usePowerUpClient } from '../hooks/usePowerUpClient';
 import { useClusterSettings } from '../hooks/useClusterSettings';
 import { OpenShiftClient } from '../services/openshiftClient';
 import type { AgentPod } from '../types/pods';
+import type { OpenShiftPodApi } from '../services/openshiftClient';
+import { getPreviewConfig } from '../utils/preview';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
 
@@ -14,9 +16,14 @@ const LogStreamModal = () => {
   const [lines, setLines] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'streaming' | 'error'>('idle');
   const [error, setError] = useState<Error | null>(null);
+  const previewConfig = getPreviewConfig();
 
   const pod = trello?.arg<AgentPod>('pod');
-  const openShiftClient = useMemo(() => {
+  const previewClient = previewConfig?.openShiftClient ?? null;
+  const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
+    if (previewClient) {
+      return previewClient;
+    }
     if (!token || !settings.clusterUrl) {
       return null;
     }
@@ -27,7 +34,7 @@ const LogStreamModal = () => {
       ignoreSsl: settings.ignoreSsl,
       caBundle: settings.caBundle,
     });
-  }, [settings, token]);
+  }, [previewClient, settings, token]);
 
   useEffect(() => {
     if (!pod || !openShiftClient) {

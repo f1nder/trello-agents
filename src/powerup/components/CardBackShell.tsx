@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { AgentPod } from '../types/pods';
+import type { OpenShiftPodApi } from '../services/openshiftClient';
 import { useLivePods } from '../hooks/useLivePods';
 import { usePowerUpClient } from '../hooks/usePowerUpClient';
 import { useClusterSettings } from '../hooks/useClusterSettings';
 import { useCardMetadata } from '../hooks/useCardMetadata';
 import { OpenShiftClient } from '../services/openshiftClient';
 import { resolveAssetUrl } from '../utils/url';
+import { getPreviewConfig } from '../utils/preview';
 import PodActions from './PodActions';
 import '../../styles/index.css';
 import '../../pages/InnerPage.css';
@@ -15,8 +17,13 @@ const CardBackShell = () => {
   const { settings, token, status: settingsStatus, error: settingsError } = useClusterSettings(trello);
   const { card, status: cardStatus, error: cardError } = useCardMetadata(trello);
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set());
+  const previewConfig = getPreviewConfig();
+  const previewClient = previewConfig?.openShiftClient ?? null;
 
-  const openShiftClient = useMemo(() => {
+  const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
+    if (previewClient) {
+      return previewClient;
+    }
     if (!settings.clusterUrl || !token) {
       return null;
     }
@@ -27,7 +34,7 @@ const CardBackShell = () => {
       ignoreSsl: settings.ignoreSsl,
       caBundle: settings.caBundle,
     });
-  }, [settings, token]);
+  }, [previewClient, settings, token]);
 
   const livePods = useLivePods({
     client: openShiftClient,

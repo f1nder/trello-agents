@@ -16,6 +16,7 @@ export default defineConfig({
         cardBack: resolve(rootDir, 'card-back.html'),
         settings: resolve(rootDir, 'settings.html'),
         logs: resolve(rootDir, 'logs.html'),
+        preview: resolve(rootDir, 'preview.html'),
       },
     },
   },

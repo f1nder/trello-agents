@@ -51,6 +51,13 @@ export interface StreamLogsOptions {
   signal?: AbortSignal;
 }
 
+export interface OpenShiftPodApi {
+  listPods(params?: ListPodsParams): Promise<AgentPod[]>;
+  watchPods(handler: PodWatchHandler, options?: WatchPodsOptions): () => void;
+  stopPod(podName: string, options?: StopPodOptions): Promise<void>;
+  streamLogs(podName: string, options?: StreamLogsOptions): Promise<ReadableStreamDefaultReader<Uint8Array>>;
+}
+
 const textDecoder = new TextDecoder();
 
 const waitFor = (ms: number, signal?: AbortSignal) =>
@@ -139,7 +146,7 @@ export class OpenShiftRequestError extends Error {
  * Minimal fetch-based OpenShift API client targeting the subset of
  * endpoints required by the Card Agents roster.
  */
-export class OpenShiftClient {
+export class OpenShiftClient implements OpenShiftPodApi {
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
 

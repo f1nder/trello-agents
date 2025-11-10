@@ -17,6 +17,7 @@ Trello:
 - `/card-back.html` – card-back section iframe with live pod roster + actions.
 - `/settings.html` – native Power-Up board settings iframe (opened from Trello’s admin drawer).
 - `/logs.html` – Trello modal that streams pod logs via the OpenShift follow API.
+- `/preview.html` – standalone preview harness that mocks Trello/OpenShift so you can debug CardBack + Log modal flows without embedding in Trello.
 
 ## Scripts
 
@@ -45,6 +46,8 @@ on `watch=true` streams. Stop/log actions reuse the same client so credentials n
   previous snapshot and surface Trello alerts.
 - **Log streaming:** Modals receive the selected pod via `t.modal({ args })` and stream chunks into a scrolling terminal
   with automatic cleanup on close/unmount.
+- **Preview harness:** `preview.html` spins up a mock Trello client + OpenShift watch/log service so the exact Trello
+  components can be tested locally with dummy pods, optimistic stop flows, and the log viewer modal.
 
 ## Deployment Notes
 

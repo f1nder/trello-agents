@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { STORAGE_KEYS } from '../config/constants';
 import type { ClusterSettings } from '../types/settings';
 import { DEFAULT_CLUSTER_SETTINGS } from '../types/settings';
+import { getPreviewConfig } from '../utils/preview';
 
 export interface ClusterSettingsResult {
   settings: ClusterSettings;
@@ -17,6 +18,14 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    const preview = getPreviewConfig();
+    if (preview?.settings) {
+      setSettings(preview.settings);
+      setToken(preview.token ?? null);
+      setStatus('ready');
+      return;
+    }
+
     if (!trello) {
       setStatus('idle');
       setToken(null);

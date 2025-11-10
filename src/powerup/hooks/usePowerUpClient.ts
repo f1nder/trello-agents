@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
+import { getPreviewConfig } from '../utils/preview';
 
 export const usePowerUpClient = () => {
   const [client, setClient] = useState<TrelloPowerUp.Client | null>(null);
 
   useEffect(() => {
+    const previewClient = getPreviewConfig()?.trelloClient;
+    if (previewClient) {
+      setClient(previewClient);
+      return;
+    }
+
     let cancelled = false;
 
     const bootstrap = async () => {
