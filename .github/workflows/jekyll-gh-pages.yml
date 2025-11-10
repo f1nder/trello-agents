@@ -3,7 +3,7 @@ name: Build and Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # or master, depending on your default branch
+      - main # or master, depending on your default branch
 
 permissions:
   contents: read
@@ -25,13 +25,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22  # or 20, depending on your project
+          node-version: 22 # or 20, depending on your project
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build project
         run: npm run build
+        env:
+          VITE_TRELLO_APP_KEY: 40c8614664e6a1ddb9ddd610d5bff343
 
       - name: Upload build artifacts
         uses: actions/upload-pages-artifact@v3
