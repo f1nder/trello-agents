@@ -79,8 +79,46 @@ const IconMoon = () => (
 );
 
 type StorageKey = `${"card" | "board"}:${"private" | "shared"}:${string}`;
-const storage = new Map<StorageKey, unknown>();
-const secrets = new Map<string, string>();
+const STORAGE_CACHE_KEY = "__card_agents_preview_storage__";
+const SECRET_CACHE_KEY = "__card_agents_preview_secrets__";
+
+const hydrateMap = <K extends string, V>(key: string): Map<K, V> => {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return new Map<K, V>();
+  }
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return new Map<K, V>();
+    }
+    const entries = JSON.parse(raw);
+    if (!Array.isArray(entries)) {
+      return new Map<K, V>();
+    }
+    return new Map(entries) as Map<K, V>;
+  } catch (error) {
+    console.warn("[preview] Failed to hydrate", key, error);
+    return new Map<K, V>();
+  }
+};
+
+const persistMap = (key: string, map: Map<string, unknown>) => {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    const payload = JSON.stringify(Array.from(map.entries()));
+    window.localStorage.setItem(key, payload);
+  } catch (error) {
+    console.warn("[preview] Failed to persist", key, error);
+  }
+};
+
+const storage = hydrateMap<StorageKey, unknown>(STORAGE_CACHE_KEY);
+const secrets = hydrateMap<string, string>(SECRET_CACHE_KEY);
+
+const persistStorage = () => persistMap(STORAGE_CACHE_KEY, storage);
+const persistSecrets = () => persistMap(SECRET_CACHE_KEY, secrets);
 type ModalHandler = (
   args: Record<string, unknown> | undefined,
   resolve: () => void
@@ -156,14 +194,17 @@ const previewClient: TrelloPowerUp.Client = {
   },
   set: async (scope, visibility, key, value) => {
     storage.set(keyFor(scope, visibility, key), value);
+    persistStorage();
   },
   get: async (scope, visibility, key) =>
     storage.get(keyFor(scope, visibility, key)) as never,
   remove: async (scope, visibility, key) => {
     storage.delete(keyFor(scope, visibility, key));
+    persistStorage();
   },
   storeSecret: async (key, value) => {
     secrets.set(key, value);
+    persistSecrets();
     return key;
   },
   loadSecret: async (key) => secrets.get(key) ?? null,

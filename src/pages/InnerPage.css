@@ -166,6 +166,57 @@
   min-height: 40px;
 }
 
+.pod-row--skeleton {
+  position: relative;
+  overflow: hidden;
+  gap: 1rem;
+  opacity: 0.9;
+}
+
+.pod-row--skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: translateX(-100%);
+  animation: pod-shimmer 1.25s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.skeleton-block {
+  display: block;
+  background: var(--ca-surface-muted);
+  border-radius: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-block--icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.skeleton-block--text {
+  width: 160px;
+  height: 12px;
+}
+
+.skeleton-block--text + .skeleton-block--text {
+  margin-top: 0.35rem;
+}
+
+.skeleton-block--thin {
+  width: 120px;
+}
+
+.skeleton-block--button {
+  width: 76px;
+  height: 28px;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
 .status-indicator {
   width: 28px;
   height: 28px;
@@ -407,6 +458,15 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes pod-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
   }
 }
 

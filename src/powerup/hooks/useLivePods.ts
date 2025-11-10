@@ -50,6 +50,7 @@ export interface UseLivePodsResult {
   error: Error | null;
   reconnectAttempts: number;
   lastEventAt: number | null;
+  initialLoadComplete: boolean;
   mutate: {
     upsert: (pod: AgentPod) => void;
     remove: (podId: string) => void;
@@ -63,6 +64,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
   const [error, setError] = useState<Error | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [lastEventAt, setLastEventAt] = useState<number | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   useEffect(() => {
     if (!client || !cardId) {
@@ -70,6 +72,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
       dispatch({ type: 'reset', pods: [] });
       setStatus('idle');
       setError(null);
+      setInitialLoadComplete(false);
       return;
     }
 
@@ -77,6 +80,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
     setStatus('loading');
     setError(null);
     setReconnectAttempts(0);
+    setInitialLoadComplete(false);
     logger.info('useLivePods: start list+watch', { cardId, namespace });
 
     client
@@ -87,6 +91,7 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
         }
         logger.info('useLivePods: initial list complete', { count: initial.length });
         dispatch({ type: 'reset', pods: initial });
+        setInitialLoadComplete(true);
       })
       .catch((listError) => {
         if (disposed) {
@@ -157,5 +162,5 @@ export const useLivePods = ({ client, cardId, namespace }: UseLivePodsOptions): 
     [],
   );
 
-  return { pods, groups, status, error, reconnectAttempts, lastEventAt, mutate };
+  return { pods, groups, status, error, reconnectAttempts, lastEventAt, initialLoadComplete, mutate };
 };

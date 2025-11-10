@@ -274,14 +274,14 @@ export class OpenShiftClient implements OpenShiftPodApi {
       });
     }
 
-    const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
-    try {
-      await this.request(podPath, { method: "DELETE" });
-    } catch (error) {
-      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
-        throw error;
-      }
-    }
+    // const podPath = `/api/v1/namespaces/${namespace}/pods/${podName}`;
+    // // try {
+    // //   await this.request(podPath, { method: "DELETE" });
+    // // } catch (error) {
+    // //   if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
+    // //     throw error;
+    // //   }
+    // // }
 
     if (!jobName) {
       return;

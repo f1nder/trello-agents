@@ -176,6 +176,15 @@ const CardBackShell = () => {
     [livePods.pods]
   );
 
+  const isAwaitingInitialPods =
+    sortedPods.length === 0 &&
+    !livePods.initialLoadComplete &&
+    (livePods.status === "idle" ||
+      livePods.status === "loading" ||
+      livePods.status === "connecting");
+  const shouldShowEmptyState =
+    sortedPods.length === 0 && livePods.initialLoadComplete;
+
   // Track which pods have been seen to animate only truly new insertions.
   const seenPodIdsRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
@@ -429,7 +438,26 @@ const CardBackShell = () => {
             </div>
           </article>
         );})}
-        {sortedPods.length === 0 && (
+        {isAwaitingInitialPods &&
+          Array.from({ length: 2 }).map((_, index) => (
+            <article
+              key={`pod-skeleton-${index}`}
+              className="pod-row pod-row--skeleton"
+              aria-hidden="true"
+            >
+              <div className="pod-row__status">
+                <span className="skeleton-block skeleton-block--icon" />
+              </div>
+              <div className="pod-row__meta">
+                <span className="skeleton-block skeleton-block--text" />
+                <span className="skeleton-block skeleton-block--text skeleton-block--thin" />
+              </div>
+              <div className="pod-row__actions">
+                <span className="skeleton-block skeleton-block--button" />
+              </div>
+            </article>
+          ))}
+        {shouldShowEmptyState && (
           <article className="pod-row pod-row--empty">
             <div className="pod-row__meta">
               <strong>No pods in scope</strong>
