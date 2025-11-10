@@ -156,7 +156,9 @@ const PreviewApp = () => {
             justifyContent: 'center',
             padding: '2rem',
             zIndex: 20,
+            pointerEvents: 'none',
           }}
+          aria-hidden="true"
         >
           <div
             style={{
@@ -167,6 +169,7 @@ const PreviewApp = () => {
               overflow: 'hidden',
               boxShadow: '0 10px 35px rgba(15, 23, 42, 0.25)',
               position: 'relative',
+              pointerEvents: 'auto',
             }}
           >
             <header
