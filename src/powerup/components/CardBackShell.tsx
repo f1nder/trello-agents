@@ -459,7 +459,7 @@ const CardBackShell = () => {
                   }
                   isStopping={pendingStopIds.has(pod.id)}
                   variant="compact"
-                  showStop={inferStatusKind(pod.phase) === "running"}
+                  showStop={(() => { const k = kind; return k === "running" || k === "pending"; })()}
                 />
               </div>
             </article>

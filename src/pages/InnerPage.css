@@ -115,17 +115,17 @@
 .pod-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .pod-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
   background: var(--ca-surface);
-  border-radius: 0.65rem;
-  padding: 0.6rem 0.85rem;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.65rem;
   box-shadow: var(--ca-card-shadow-sm);
   border: 1px solid var(--ca-border);
   will-change: transform, opacity;
@@ -158,7 +158,7 @@
 
 /* Agent line and name styling */
 .pod-row__agentline {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--ca-text-subtle);
 }
 
@@ -168,12 +168,12 @@
 }
 
 .pod-row__meta strong {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--ca-text);
 }
 
 .pod-row__time {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--ca-text-subtle);
 }
 
@@ -186,8 +186,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  min-height: 40px;
+  width: 32px;
+  min-height: 32px;
 }
 
 .pod-row--skeleton {
@@ -247,8 +247,8 @@
 }
 
 .status-indicator {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
 
   background: var(--ca-surface-muted);
   display: inline-flex;
@@ -258,8 +258,8 @@
 }
 
 .status-indicator__spinner {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border: 2px solid var(--ca-spinner-track);
   border-top-color: var(--ca-spinner-fill);
   border-radius: 999px;
@@ -267,15 +267,15 @@
 }
 
 .status-indicator__dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
 }
 
 /* Generic icon size for status indicator */
 .status-indicator__icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: block;
 }
 
