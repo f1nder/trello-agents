@@ -421,8 +421,14 @@ const CardBackShell = () => {
                 className="pod-row__time"
                 title={`Started ${new Date(pod.startedAt).toLocaleString()}`}
               >
-                {formatRuntime(pod.runtimeStart ?? pod.startedAt, now, pod.runtimeEnd)} ·{" "}
-                {pod.lastEvent ?? "no events yet"}
+                {pod.agent || pod.model ? (
+                  <span className="pod-row__agentline">
+                    agent: <span className="pod-row__agentname">{pod.agent ?? "?"}</span>
+                    {pod.model ? <span className="pod-row__modelline">  model: {pod.model}</span> : null}
+                  </span>
+                ) : null}
+                {pod.agent || pod.model ? " · " : ""}
+                {formatRuntime(pod.runtimeStart ?? pod.startedAt, now, pod.runtimeEnd)} · {pod.lastEvent ?? "no events yet"}
               </span>
             </div>
             <div className="pod-row__actions">

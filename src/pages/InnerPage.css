@@ -148,6 +148,25 @@
   gap: 0.1rem;
 }
 
+/* Headline row: agent/model first, then pod name */
+.pod-row__headline {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+/* Agent line and name styling */
+.pod-row__agentline {
+  font-size: 0.85rem;
+  color: var(--ca-text-subtle);
+}
+
+.pod-row__agentname {
+  color: #fff;
+  font-weight: 700;
+}
+
 .pod-row__meta strong {
   font-size: 0.95rem;
   color: var(--ca-text);

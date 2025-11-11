@@ -14,6 +14,12 @@ export interface AgentPod {
    * Kubernetes metadata.annotations.jobName; otherwise falls back to `name`.
    */
   displayName?: string;
+  /** Raw Kubernetes job name from metadata.annotations.jobName */
+  jobName?: string;
+  /** Optional agent kind from pod env var AGENT */
+  agent?: string;
+  /** Optional model name from pod env var MODEL */
+  model?: string;
   phase: PodPhase;
   cardId: string;
   namespace: string;

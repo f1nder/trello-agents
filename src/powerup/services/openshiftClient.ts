@@ -126,10 +126,19 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
   const displayName = jobName && jobName.length > 0
     ? jobName
     : (resource.metadata.name ?? "unknown");
+  // Extract AGENT and MODEL from POD's first/primary container env vars
+  const containerSpecs = resource.spec?.containers ?? [];
+  const primarySpec = containerSpecs.find((c) => c.name === primaryName) ?? containerSpecs[0];
+  const env = primarySpec?.env ?? [];
+  const agentEnv = env.find((e) => (e.name ?? "").toUpperCase() === "AGENT")?.value;
+  const modelEnv = env.find((e) => (e.name ?? "").toUpperCase() === "MODEL")?.value;
   return {
     id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
     name: resource.metadata.name ?? "unknown",
     displayName,
+    jobName: jobName ?? undefined,
+    agent: agentEnv ?? undefined,
+    model: modelEnv ?? undefined,
     phase: coercePhase(resource.status?.phase),
     cardId: resource.metadata.labels?.trelloCardId ?? "",
     namespace: resource.metadata.namespace ?? "",
@@ -559,8 +568,10 @@ interface KubernetesPodStatus {
   containerStatuses?: { name?: string; restartCount?: number; state?: KubernetesContainerState; lastState?: KubernetesContainerState }[];
 }
 
+interface KubernetesEnvVar { name?: string; value?: string }
+
 interface KubernetesPodSpec {
-  containers?: { name: string }[];
+  containers?: { name: string; env?: KubernetesEnvVar[] }[];
   nodeName?: string;
 }
 

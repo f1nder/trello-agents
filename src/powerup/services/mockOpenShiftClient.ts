@@ -24,6 +24,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-running-1',
       name: 'card-agent-running-1',
+      agent: 'codex',
+      model: 'gpt-5',
       phase: 'Running',
       cardId,
       namespace,
@@ -38,6 +40,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-running-2',
       name: 'card-agent-running-2',
+      agent: 'codex',
+      model: 'gpt-4.1',
       phase: 'Running',
       cardId,
       namespace,
@@ -52,6 +56,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-pending-1',
       name: 'card-agent-pending-1',
+      agent: 'reviewer',
+      model: 'gpt-4o-mini',
       phase: 'Pending',
       cardId,
       namespace,
@@ -66,6 +72,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-succeeded-1',
       name: 'card-agent-completed-1',
+      agent: 'codex',
+      model: 'gpt-5',
       phase: 'Succeeded',
       cardId,
       namespace,
@@ -80,6 +88,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-succeeded-2',
       name: 'card-agent-completed-2',
+      agent: 'runner',
+      model: 'gpt-3.5',
       phase: 'Succeeded',
       cardId,
       namespace,
@@ -94,6 +104,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-failed-1',
       name: 'card-agent-failed-1',
+      agent: 'codex',
+      model: 'gpt-4',
       phase: 'Failed',
       cardId,
       namespace,
@@ -108,6 +120,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
     {
       id: 'preview-failed-2',
       name: 'card-agent-failed-2',
+      agent: 'codex',
+      model: 'gpt-4o',
       phase: 'Failed',
       cardId,
       namespace,
