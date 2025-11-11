@@ -31,7 +31,7 @@ declare namespace TrelloPowerUp {
   interface CapabilityMap {
     'card-back-section': CapabilityHandler<[Client], Promise<CardBackSectionResponse> | CardBackSectionResponse>;
     'card-buttons': CapabilityHandler<[Client], CardButton[]>;
-    'card-detail-badges': CapabilityHandler<[Client], Promise<CardDetailBadge[]> | CardDetailBadge[]>;
+    'card-detail-badges'?: CapabilityHandler<[Client], Promise<CardDetailBadge[]> | CardDetailBadge[]>;
     'card-badges': CapabilityHandler<[Client], Promise<CardBadge[]> | CardBadge[]>;
     'authorization-status': CapabilityHandler<[Client], Promise<AuthorizationStatus>>;
     'show-authorization': CapabilityHandler<[Client], Promise<void> | void>;

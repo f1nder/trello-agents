@@ -6,7 +6,6 @@
   "capabilities": [
     "card-back-section",
     "card-buttons",
-    "card-detail-badges",
     "card-badges",
     "modals",
     "authorization-status",

@@ -2,7 +2,6 @@ import { APP_NAME } from './config/constants';
 import { cardBackSection } from './capabilities/cardBackSection';
 import { cardButtons } from './capabilities/cardButtons';
 import { cardBadges } from './capabilities/cardBadges';
-import { cardDetailBadges } from './capabilities/cardDetailBadges';
 import { authorizationStatus, showAuthorization } from './capabilities/authorization';
 import { showSettings } from './capabilities/settings';
 import logger from './utils/logger';
@@ -12,7 +11,6 @@ const capabilityMap = {
   'card-back-section': cardBackSection,
   'card-buttons': cardButtons,
   'card-badges': cardBadges,
-  'card-detail-badges': cardDetailBadges,
   'authorization-status': authorizationStatus,
   'show-authorization': showAuthorization,
   'show-settings': showSettings,
