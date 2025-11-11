@@ -9,5 +9,4 @@ export const POWERUP_CONNECTOR = "/powerup.html";
 
 export const STORAGE_KEYS = {
   clusterConfig: "clusterConfig",
-  tokenSecretId: "clusterTokenSecretId",
 } as const;

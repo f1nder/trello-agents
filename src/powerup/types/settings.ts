@@ -3,7 +3,7 @@ export interface ClusterSettings {
   namespace: string;
   loginAlias: string;
   ignoreSsl: boolean;
-  tokenSecretId?: string;
+  token: string;
   caBundle?: string;
 }
 
@@ -12,4 +12,5 @@ export const DEFAULT_CLUSTER_SETTINGS: ClusterSettings = {
   namespace: 'automation',
   loginAlias: 'service-account',
   ignoreSsl: false,
+  token: '',
 };
