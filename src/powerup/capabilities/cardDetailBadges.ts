@@ -31,6 +31,7 @@ const buildDetailBadge = async (
 
   const plural = count === 1 ? "" : "s";
   return {
+    title: `Agents`,
     icon: resolveAssetUrl("/icons/card-agents-gray.svg"),
     text: `${count} agent${plural}`,
     color: "red",
