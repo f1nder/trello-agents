@@ -10,6 +10,7 @@ import type {
 } from './openshiftClient';
 
 const textEncoder = new TextEncoder();
+const nowIso = () => new Date().toISOString();
 
 const clonePod = (pod: AgentPod): AgentPod => ({
   ...pod,
@@ -27,6 +28,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 5).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 5).toISOString(),
+      runtimeEnd: null,
       containers: ['agent'],
       lastEvent: 'Probe success',
       nodeName: 'automation-node-a',
@@ -39,6 +42,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 8).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 8).toISOString(),
+      runtimeEnd: null,
       containers: ['agent'],
       lastEvent: 'Streaming logs',
       nodeName: 'automation-node-b',
@@ -51,6 +56,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 2).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 2).toISOString(),
+      runtimeEnd: null,
       containers: ['agent'],
       lastEvent: 'Pulling image',
       nodeName: 'automation-node-c',
@@ -63,6 +70,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 15).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 18).toISOString(),
+      runtimeEnd: new Date(now - 1000 * 60 * 15).toISOString(),
       containers: ['agent'],
       lastEvent: 'Completed successfully',
       nodeName: 'automation-node-d',
@@ -75,6 +84,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 20).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 26).toISOString(),
+      runtimeEnd: new Date(now - 1000 * 60 * 20).toISOString(),
       containers: ['agent'],
       lastEvent: 'Job finished',
       nodeName: 'automation-node-e',
@@ -87,6 +98,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 12).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 14).toISOString(),
+      runtimeEnd: new Date(now - 1000 * 60 * 12).toISOString(),
       containers: ['agent'],
       lastEvent: 'Error: exit code 1',
       nodeName: 'automation-node-f',
@@ -99,6 +112,8 @@ const createBasePods = (cardId: string, namespace: string): AgentPod[] => {
       cardId,
       namespace,
       startedAt: new Date(now - 1000 * 60 * 18).toISOString(),
+      runtimeStart: new Date(now - 1000 * 60 * 23).toISOString(),
+      runtimeEnd: new Date(now - 1000 * 60 * 18).toISOString(),
       containers: ['agent'],
       lastEvent: 'CrashLoopBackOff',
       nodeName: 'automation-node-g',
@@ -152,22 +167,26 @@ export class MockOpenShiftClient implements OpenShiftPodApi {
 
   async streamLogs(podName: string, options: StreamLogsOptions = {}): Promise<ReadableStreamDefaultReader<Uint8Array>> {
     void options;
+    const pod = this.pods.find((p) => p.name === podName);
     let count = 0;
     let interval: ReturnType<typeof setInterval> | null = null;
+    const periodMs = pod?.phase === 'Running' ? 300 : 400;
+    const maxLines = pod?.phase === 'Running' ? 200 : 60;
     const stream = new ReadableStream<Uint8Array>({
       start: (controller) => {
         interval = setInterval(() => {
           count += 1;
-          const line = `[${new Date().toISOString()}] ${podName}: preview log line #${count}\n`;
+          const ts = nowIso();
+          const line = `${ts} ${podName}: preview log line #${count}\n`;
           controller.enqueue(textEncoder.encode(line));
-          if (count >= 40) {
+          if (count >= maxLines) {
             if (interval) {
               clearInterval(interval);
               interval = null;
             }
             controller.close();
           }
-        }, 250);
+        }, periodMs);
       },
       cancel: () => {
         if (interval) {
@@ -194,15 +213,53 @@ export class MockOpenShiftClient implements OpenShiftPodApi {
   }
 
   private jitter() {
-    if (this.pods.length === 0) {
-      return;
-    }
+    if (this.pods.length === 0) return;
 
     const index = Math.floor(Math.random() * this.pods.length);
     const pod = { ...this.pods[index] };
-    const phases: AgentPod['phase'][] = ['Running', 'Pending', 'Succeeded', 'Failed'];
-    pod.phase = phases[Math.floor(Math.random() * phases.length)];
-    pod.lastEvent = `Heartbeat ${new Date().toLocaleTimeString()}`;
+
+    switch (pod.phase) {
+      case 'Pending': {
+        if (Math.random() < 0.6) {
+          pod.phase = 'Running';
+          pod.runtimeStart = nowIso();
+          pod.runtimeEnd = null;
+          pod.lastEvent = 'Containers ready';
+        } else {
+          pod.lastEvent = 'Pulling image';
+        }
+        break;
+      }
+      case 'Running': {
+        const r = Math.random();
+        if (r < 0.15) {
+          pod.phase = 'Succeeded';
+          pod.runtimeEnd = nowIso();
+          pod.lastEvent = 'Completed successfully';
+        } else if (r < 0.25) {
+          pod.phase = 'Failed';
+          pod.runtimeEnd = nowIso();
+          pod.lastEvent = 'Error: exit code 1';
+        } else {
+          pod.lastEvent = `Heartbeat ${new Date().toLocaleTimeString()}`;
+        }
+        break;
+      }
+      case 'Succeeded':
+      case 'Failed': {
+        if (Math.random() < 0.1) {
+          pod.phase = 'Pending';
+          pod.runtimeStart = undefined;
+          pod.runtimeEnd = null;
+          pod.startedAt = nowIso();
+          pod.lastEvent = 'Queued new run';
+        }
+        break;
+      }
+      default:
+        pod.lastEvent = `Heartbeat ${new Date().toLocaleTimeString()}`;
+    }
+
     this.pods[index] = pod;
     this.emit({ type: 'MODIFIED', pod: clonePod(pod) });
   }

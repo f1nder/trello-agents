@@ -132,6 +132,11 @@
   transition: transform 200ms ease, opacity 220ms ease;
 }
 
+/* Dim pending pods with smooth opacity transition */
+.pod-row--dimmed {
+  opacity: 0.5;
+}
+
 .pod-row--empty {
   grid-template-columns: 1fr;
   justify-items: flex-start;
@@ -174,10 +179,15 @@
 }
 
 .pod-row--skeleton::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
   transform: translateX(-100%);
   animation: pod-shimmer 1.25s ease-in-out infinite;
   pointer-events: none;

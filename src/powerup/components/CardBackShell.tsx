@@ -97,28 +97,20 @@ const StatusIndicator = ({ phase }: { phase: string }) => {
   );
 };
 
-const formatRuntime = (timestamp: string): string => {
-  const parsed = Date.parse(timestamp);
-  if (Number.isNaN(parsed)) {
-    return "–";
-  }
-  const diffMs = Date.now() - parsed;
-  const minutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (minutes < 1) {
-    return "0m";
-  }
-  if (minutes < 60) {
-    return `${minutes}m`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    return `${days}d ${hours % 24}h`;
-  }
-  return remainingMinutes === 0
-    ? `${hours}h`
-    : `${hours}h ${remainingMinutes}m`;
+const formatRuntime = (
+  startTimestamp: string,
+  nowMs: number = Date.now(),
+  endTimestamp?: string | null,
+): string => {
+  const start = Date.parse(startTimestamp);
+  if (Number.isNaN(start)) return "–";
+  const endMs = endTimestamp ? Date.parse(endTimestamp) : nowMs;
+  const diffSec = Math.max(0, Math.floor(((Number.isNaN(endMs) ? nowMs : endMs) - start) / 1000));
+  const minutes = Math.floor(diffSec / 60);
+  const seconds = diffSec % 60;
+  const mm = String(minutes);
+  const ss = String(seconds).padStart(2, "0");
+  return `${mm}:${ss} m`;
 };
 
 const CardBackShell = () => {
@@ -283,6 +275,13 @@ const CardBackShell = () => {
     Boolean
   ) as Error[];
 
+  // tick every second so runtime includes seconds
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <main className="inner-page" data-card-back data-theme={theme}>
       <header>
@@ -408,8 +407,11 @@ const CardBackShell = () => {
       <section className="pod-list">
         {sortedPods.map((pod) => {
           const isNew = initializedRef.current && !seenPodIdsRef.current.has(pod.id);
+          const kind = inferStatusKind(pod.phase);
+          const rowClass =
+            "pod-row" + (isNew ? " pod-row--enter" : "") + (kind === "pending" ? " pod-row--dimmed" : "");
           return (
-          <article key={pod.id} className={"pod-row" + (isNew ? " pod-row--enter" : "")}>
+          <article key={pod.id} className={rowClass}>
             <div className="pod-row__status">
               <StatusIndicator phase={pod.phase} />
             </div>
@@ -419,7 +421,7 @@ const CardBackShell = () => {
                 className="pod-row__time"
                 title={`Started ${new Date(pod.startedAt).toLocaleString()}`}
               >
-                {formatRuntime(pod.startedAt)} ·{" "}
+                {formatRuntime(pod.runtimeStart ?? pod.startedAt, now, pod.runtimeEnd)} ·{" "}
                 {pod.lastEvent ?? "no events yet"}
               </span>
             </div>
@@ -433,7 +435,7 @@ const CardBackShell = () => {
                 }
                 isStopping={pendingStopIds.has(pod.id)}
                 variant="compact"
-                showStop={inferStatusKind(pod.phase) !== "complete"}
+                showStop={inferStatusKind(pod.phase) === "running"}
               />
             </div>
           </article>

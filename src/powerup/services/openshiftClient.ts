@@ -111,6 +111,16 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
     readyCondition?.message ?? resource.status?.message ?? ownerRef?.kind;
   const fallbackId =
     globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const statusList = resource.status?.containerStatuses ?? [];
+  const primaryName = containers[0];
+  const selected =
+    statusList.find((s) => s.name === primaryName) ?? statusList[0];
+  const state = selected?.state ?? selected?.lastState;
+  const runningStarted = state?.running?.startedAt;
+  const terminatedStarted = state?.terminated?.startedAt;
+  const terminatedFinished = state?.terminated?.finishedAt;
+  const runtimeStart = runningStarted ?? terminatedStarted ?? resource.status?.startTime;
+  const runtimeEnd = terminatedFinished ?? null;
   return {
     id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
     name: resource.metadata.name ?? "unknown",
@@ -118,6 +128,8 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
     cardId: resource.metadata.labels?.trelloCardId ?? "",
     namespace: resource.metadata.namespace ?? "",
     startedAt: resource.status?.startTime ?? new Date().toISOString(),
+    runtimeStart: runtimeStart ?? undefined,
+    runtimeEnd,
     containers,
     lastEvent,
     nodeName: resource.spec?.nodeName,
@@ -523,12 +535,21 @@ interface KubernetesCondition {
   reason?: string;
 }
 
+interface KubernetesContainerStateRunning { startedAt?: string }
+interface KubernetesContainerStateTerminated { startedAt?: string; finishedAt?: string }
+interface KubernetesContainerStateWaiting { reason?: string }
+interface KubernetesContainerState {
+  running?: KubernetesContainerStateRunning;
+  terminated?: KubernetesContainerStateTerminated;
+  waiting?: KubernetesContainerStateWaiting;
+}
+
 interface KubernetesPodStatus {
   phase?: string;
   startTime?: string;
   message?: string;
   conditions?: KubernetesCondition[];
-  containerStatuses?: { name?: string; restartCount?: number }[];
+  containerStatuses?: { name?: string; restartCount?: number; state?: KubernetesContainerState; lastState?: KubernetesContainerState }[];
 }
 
 interface KubernetesPodSpec {

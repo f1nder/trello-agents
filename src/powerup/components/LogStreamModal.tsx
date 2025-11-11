@@ -109,12 +109,18 @@ const LogStreamModal = () => {
     abortRef.current = abortController;
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     let cancelled = false;
+    let stopWatching: (() => void) | null = null;
+
+    // reset UI state on pod change
     setLines([]);
     setError(null);
-    setStatus("connecting");
 
-    const connect = async () => {
+    const canStreamFromPhase = (phase: string | undefined) =>
+      phase !== "Pending" && phase !== "Unknown"; // avoid connecting while pending/unresolved
+
+    const startStreaming = async () => {
       try {
+        setStatus("connecting");
         reader = await openShiftClient.streamLogs(pod.name, {
           namespace: pod.namespace,
           container: pod.containers[0],
@@ -148,12 +154,41 @@ const LogStreamModal = () => {
       }
     };
 
-    connect();
+    // If pod is ready (not pending), connect immediately. Otherwise, watch for transition.
+    if (canStreamFromPhase(pod.phase)) {
+      startStreaming();
+    } else {
+      setStatus("idle");
+      // Watch only the specific pod by name and namespace, and connect when it transitions
+      stopWatching = openShiftClient.watchPods(
+        (evt) => {
+          if (evt.pod.name !== pod.name) return;
+          if (canStreamFromPhase(evt.pod.phase) && !cancelled) {
+            // stop watching and begin streaming
+            stopWatching?.();
+            stopWatching = null;
+            startStreaming();
+          }
+        },
+        {
+          namespace: pod.namespace,
+          fieldSelector: `metadata.name=${pod.name}`,
+          onError: (err) => {
+            // surface watch errors when we cannot recover
+            if (!cancelled) {
+              setStatus("error");
+              setError(err);
+            }
+          },
+        }
+      );
+    }
 
     return () => {
       cancelled = true;
       abortController.abort();
       reader?.cancel().catch(() => undefined);
+      stopWatching?.();
       abortRef.current = null;
     };
   }, [openShiftClient, pod]);
@@ -206,6 +241,12 @@ const LogStreamModal = () => {
     } finally {
       setIsStopping(false);
     }
+  };
+
+  // Helper to detect whether the logs panel is scrolled to the bottom
+  const isAtBottom = (el: HTMLDivElement) => {
+    const threshold = 4; // px tolerance for float rounding
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   };
 
   return (
@@ -303,8 +344,19 @@ const LogStreamModal = () => {
       {tab === "logs" && (
         <section
           ref={logsRef}
-          onScroll={() => {
-            if (!isAutoScrollingRef.current && follow) setFollow(false);
+          onScroll={(e) => {
+            const el = logsRef.current;
+            // Only treat user-initiated scrolling as an intent to stop following
+            const isUser = (e as unknown as { nativeEvent?: { isTrusted?: boolean } })
+              ?.nativeEvent?.isTrusted === true;
+            if (!el) return;
+
+            if (!isUser) return; // ignore programmatic scrolls
+
+            // If the user scrolls away from the bottom, disable follow
+            if (follow && !isAtBottom(el)) {
+              setFollow(false);
+            }
           }}
           style={{
             background: "var(--ca-log-bg)",
@@ -339,7 +391,11 @@ const LogStreamModal = () => {
             </button>
           </div>
           {lines.length === 0 ? (
-            <pre style={{ margin: 0, opacity: 0.7 }}>No log output yet…</pre>
+            <pre style={{ margin: 0, opacity: 0.7 }}>
+              {pod?.phase === "Pending"
+                ? "Pod is Pending. Will connect and stream once it starts…"
+                : "No log output yet…"}
+            </pre>
           ) : null}
           {lines.map((line, index) => (
             <pre key={`${line}-${index}`} style={{ margin: 0 }}>

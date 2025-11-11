@@ -30,22 +30,11 @@ const IconStop = () => (
   </svg>
 );
 
+// Contextual logs icon: terminal panel with tailing lines
 const IconLogs = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 14 14"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <path
-      d="M3 2.5h8A1.5 1.5 0 0 1 12.5 4v6A1.5 1.5 0 0 1 11 11.5H5.414l-2.707 2.293A.5.5 0 0 1 2 13.5v-9A2 2 0 0 1 4 2.5Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+    <rect x="1.5" y="2" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+    <path d="M3 5h6M3 7h8M3 9h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
   </svg>
 );
 
@@ -99,8 +88,8 @@ const PodActions = ({
           className="icon-button"
           disabled={logsDisabled}
           onClick={openLogs}
-          aria-label="Open logs"
-          title="Open logs"
+          aria-label="Tail logs"
+          title="Tail logs"
         >
           <IconLogs />
         </button>
