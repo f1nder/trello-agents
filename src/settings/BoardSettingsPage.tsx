@@ -16,7 +16,6 @@ const BoardSettingsPage = () => {
   const [status, setStatus] = useState<'idle' | 'saving' | 'loaded'>('idle');
   const [hasStoredToken, setHasStoredToken] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing'>('idle');
-  const [toast, setToast] = useState<{ tone: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -35,16 +34,15 @@ const BoardSettingsPage = () => {
     load();
   }, [trello]);
 
-  useEffect(() => {
-    if (!toast) {
+  const showToast = (tone: 'success' | 'error' | 'info', message: string) => {
+    const display = tone === 'error' ? 'error' : 'info';
+    if (trello) {
+      void trello.alert({ message, display });
       return;
     }
-    const timer = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  const showToast = (tone: 'success' | 'error' | 'info', message: string) => {
-    setToast({ tone, message });
+    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(message);
+    }
   };
 
   const handleChange = (field: keyof ClusterSettings) => (event: ChangeEvent<HTMLInputElement>) => {
@@ -190,11 +188,6 @@ const BoardSettingsPage = () => {
         </ul>
       </section>
       {status === 'idle' && <p className="eyebrow">Waiting for Trello iframe…</p>}
-      {toast && (
-        <div className="toast-stack" aria-live="polite">
-          <div className={`toast toast--${toast.tone}`}>{toast.message}</div>
-        </div>
-      )}
     </main>
   );
 };

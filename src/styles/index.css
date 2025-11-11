@@ -222,34 +222,3 @@ input[type="password"] {
   border-radius: 999px;
   animation: pod-spin 0.75s linear infinite;
 }
-
-.toast-stack {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  z-index: 30;
-}
-
-.toast {
-  padding: 0.85rem 1rem;
-  border-radius: 0.75rem;
-  color: #fff;
-  font-size: 0.9rem;
-  min-width: 240px;
-  box-shadow: var(--ca-card-shadow);
-}
-
-.toast--success {
-  background: #16a34a;
-}
-
-.toast--error {
-  background: #dc2626;
-}
-
-.toast--info {
-  background: #2563eb;
-}
