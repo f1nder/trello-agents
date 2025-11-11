@@ -24,8 +24,10 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
     const preview = getPreviewConfig();
     if (preview?.settings) {
       logger.info('useClusterSettings: using preview settings');
-      setSettings(preview.settings);
-      setToken(preview.token ?? null);
+      const normalized = { ...DEFAULT_CLUSTER_SETTINGS, ...preview.settings };
+      setSettings(normalized);
+      const previewToken = normalized.token?.trim() ?? preview.token ?? null;
+      setToken(previewToken || null);
       setStatus('ready');
       return;
     }
@@ -45,34 +47,18 @@ export const useClusterSettings = (trello: TrelloPowerUp.Client | null): Cluster
         logger.info('useClusterSettings: loading saved cluster settings');
         const saved =
           (await trello.get<ClusterSettings>('board', 'private', STORAGE_KEYS.clusterConfig)) ?? DEFAULT_CLUSTER_SETTINGS;
+        const normalized = { ...DEFAULT_CLUSTER_SETTINGS, ...saved };
         if (cancelled) {
           return;
         }
         logger.info('useClusterSettings: settings loaded', {
-          hasUrl: Boolean(saved.clusterUrl),
-          namespace: saved.namespace,
-          tokenSecretId: saved.tokenSecretId ? '<present>' : '<missing>',
+          hasUrl: Boolean(normalized.clusterUrl),
+          namespace: normalized.namespace,
+          hasToken: Boolean(normalized.token?.trim()),
         });
-        setSettings(saved);
-
-        if (saved.tokenSecretId) {
-          try {
-            logger.info('useClusterSettings: loading token via secret id');
-            const loadedToken = await trello.loadSecret(saved.tokenSecretId);
-            if (!cancelled) {
-              logger.info('useClusterSettings: token load result', { present: Boolean(loadedToken) });
-              setToken(loadedToken);
-            }
-          } catch (tokenError) {
-            logger.warn('useClusterSettings: failed to load stored token', tokenError);
-            if (!cancelled) {
-              setToken(null);
-            }
-          }
-        } else {
-          logger.debug('useClusterSettings: no tokenSecretId stored');
-          setToken(null);
-        }
+        setSettings(normalized);
+        const nextToken = normalized.token?.trim() || null;
+        setToken(nextToken);
 
         setStatus('ready');
       } catch (loadError) {

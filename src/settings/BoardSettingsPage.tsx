@@ -12,9 +12,7 @@ const BoardSettingsPage = () => {
   const trello = usePowerUpClient();
   const theme = useAppliedTrelloTheme(trello);
   const [formState, setFormState] = useState<ClusterSettings>(DEFAULT_CLUSTER_SETTINGS);
-  const [tokenInput, setTokenInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'loaded'>('idle');
-  const [hasStoredToken, setHasStoredToken] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing'>('idle');
 
   useEffect(() => {
@@ -24,10 +22,9 @@ const BoardSettingsPage = () => {
       }
       const saved = await trello.get<ClusterSettings>('board', 'private', STORAGE_KEYS.clusterConfig);
       if (saved) {
-        setFormState(saved);
-        setHasStoredToken(Boolean(saved.tokenSecretId));
+        setFormState((prev) => ({ ...prev, ...saved }));
       } else {
-        setHasStoredToken(false);
+        setFormState(DEFAULT_CLUSTER_SETTINGS);
       }
       setStatus('loaded');
     };
@@ -56,34 +53,10 @@ const BoardSettingsPage = () => {
       return;
     }
     setStatus('saving');
-    let nextTokenSecretId = formState.tokenSecretId;
-    if (tokenInput.trim()) {
-      const secretKey = `${STORAGE_KEYS.tokenSecretId}:${Date.now().toString(36)}`;
-      await trello.storeSecret(secretKey, tokenInput.trim());
-      nextTokenSecretId = secretKey;
-      setTokenInput('');
-      setHasStoredToken(true);
-    }
-    await trello.set('board', 'private', STORAGE_KEYS.clusterConfig, { ...formState, tokenSecretId: nextTokenSecretId });
-    setFormState((prev) => ({ ...prev, tokenSecretId: nextTokenSecretId }));
-    setHasStoredToken(Boolean(nextTokenSecretId));
+    await trello.set('board', 'private', STORAGE_KEYS.clusterConfig, formState);
     setStatus('loaded');
     trackEvent(trello, 'settings-save');
     showToast('success', 'Settings saved');
-  };
-
-  const resolveToken = async () => {
-    if (tokenInput.trim()) {
-      return tokenInput.trim();
-    }
-    if (!trello || !formState.tokenSecretId) {
-      return null;
-    }
-    try {
-      return await trello.loadSecret(formState.tokenSecretId);
-    } catch {
-      return null;
-    }
   };
 
   const handleTestConnection = async () => {
@@ -96,7 +69,7 @@ const BoardSettingsPage = () => {
       showToast('error', 'Add a cluster URL and namespace before testing.');
       return;
     }
-    const token = await resolveToken();
+    const token = (formState.token ?? '').trim();
     if (!token) {
       showToast('error', 'Store a service-account token before testing the connection.');
       return;
@@ -149,9 +122,9 @@ const BoardSettingsPage = () => {
         <label>
           <span>Service-account token</span>
           <textarea
-            value={tokenInput}
-            onChange={(event) => setTokenInput(event.target.value)}
-            placeholder={hasStoredToken ? 'Token already stored — paste a new token to rotate' : 'Paste token value'}
+            value={formState.token ?? ''}
+            onChange={(event) => setFormState((prev) => ({ ...prev, token: event.target.value }))}
+            placeholder="Paste token value"
             rows={3}
           />
         </label>
@@ -182,7 +155,7 @@ const BoardSettingsPage = () => {
       <section style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#475569' }}>
         <p className="eyebrow">Security notes</p>
         <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
-          <li>Tokens are stored via Trello secrets; leave the field blank to keep the current token.</li>
+          <li>Tokens are stored as board-private config; paste a fresh value whenever you need to rotate credentials.</li>
           <li>Use Ignore SSL only when testing against trusted staging clusters.</li>
           <li>Run Test connection after edits to confirm Trello can reach your cluster.</li>
         </ul>

@@ -36,15 +36,9 @@ const loadClusterSettings = async (
       "private",
       STORAGE_KEYS.clusterConfig
     )) ?? DEFAULT_CLUSTER_SETTINGS;
-  let token: string | null = null;
-  if (saved.tokenSecretId) {
-    try {
-      token = await t.loadSecret(saved.tokenSecretId);
-    } catch (error) {
-      logger.warn("podRuntime: failed to load stored token", error);
-    }
-  }
-  return { settings: saved, token };
+  const normalized = { ...DEFAULT_CLUSTER_SETTINGS, ...saved };
+  const token = normalized.token?.trim() ? normalized.token.trim() : null;
+  return { settings: normalized, token };
 };
 
 export interface PodRuntimeContext {

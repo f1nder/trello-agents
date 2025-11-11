@@ -17,6 +17,7 @@ const previewSettings: ClusterSettings = {
   namespace: "automation",
   loginAlias: "preview-service-account",
   ignoreSsl: true,
+  token: "preview-token",
 };
 
 const previewCard: CardMetadata = {
