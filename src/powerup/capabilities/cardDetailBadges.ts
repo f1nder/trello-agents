@@ -16,7 +16,8 @@ const buildDetailBadge = async (
     snapshot = await fetchRunningPodSnapshot(t);
   } catch (error) {
     logger.warn("cardDetailBadges: snapshot fetch failed", error);
-    return null;
+    // Keep polling even on failure to recover automatically
+    return { text: "", refresh };
   }
 
   if (!snapshot) {
@@ -32,7 +33,7 @@ const buildDetailBadge = async (
   return {
     icon: resolveAssetUrl("/icons/card-agents-gray.svg"),
     text: `${count} agent${plural}`,
-    color: "blue",
+    color: "red",
     refresh,
   };
 };

@@ -28,6 +28,7 @@ const buildRunningBadge = async (
       title: "Unable to reach OpenShift pods API",
       refresh,
       monochrome: false,
+      icon: resolveAssetUrl("/icons/card-agents-gray.svg"),
     };
   }
 
@@ -43,11 +44,13 @@ const buildRunningBadge = async (
   const plural = count === 1 ? "" : "s";
   return {
     text: `${count} agent${plural}`,
-    color: "blue",
+    color: "red",
+    icon: resolveAssetUrl("/icons/card-agents-gray.svg"),
     title:
       count === 1
         ? "1 agent is Running on this card"
         : `${count} agents are Running on this card`,
+    monochrome: false,
     refresh,
   };
 };
