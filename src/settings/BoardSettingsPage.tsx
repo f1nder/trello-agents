@@ -3,6 +3,7 @@ import { DEFAULT_CLUSTER_SETTINGS, type ClusterSettings } from '../powerup/types
 import { useAppliedTrelloTheme } from '../powerup/hooks/useAppliedTrelloTheme';
 import { usePowerUpClient } from '../powerup/hooks/usePowerUpClient';
 import { STORAGE_KEYS } from '../powerup/config/constants';
+import { OpenShiftClient, OpenShiftRequestError } from '../powerup/services/openshiftClient';
 import '../styles/index.css';
 import '../pages/InnerPage.css';
 import { trackEvent } from '../powerup/utils/analytics';
@@ -14,6 +15,8 @@ const BoardSettingsPage = () => {
   const [tokenInput, setTokenInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'loaded'>('idle');
   const [hasStoredToken, setHasStoredToken] = useState(false);
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing'>('idle');
+  const [toast, setToast] = useState<{ tone: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +34,18 @@ const BoardSettingsPage = () => {
     };
     load();
   }, [trello]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showToast = (tone: 'success' | 'error' | 'info', message: string) => {
+    setToast({ tone, message });
+  };
 
   const handleChange = (field: keyof ClusterSettings) => (event: ChangeEvent<HTMLInputElement>) => {
     const value = field === 'ignoreSsl' ? event.target.checked : event.target.value;
@@ -56,7 +71,66 @@ const BoardSettingsPage = () => {
     setHasStoredToken(Boolean(nextTokenSecretId));
     setStatus('loaded');
     trackEvent(trello, 'settings-save');
+    showToast('success', 'Settings saved');
   };
+
+  const resolveToken = async () => {
+    if (tokenInput.trim()) {
+      return tokenInput.trim();
+    }
+    if (!trello || !formState.tokenSecretId) {
+      return null;
+    }
+    try {
+      return await trello.loadSecret(formState.tokenSecretId);
+    } catch {
+      return null;
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!trello) {
+      return;
+    }
+    const trimmedUrl = formState.clusterUrl.trim();
+    const trimmedNamespace = formState.namespace.trim();
+    if (!trimmedUrl || !trimmedNamespace) {
+      showToast('error', 'Add a cluster URL and namespace before testing.');
+      return;
+    }
+    const token = await resolveToken();
+    if (!token) {
+      showToast('error', 'Store a service-account token before testing the connection.');
+      return;
+    }
+    setTestStatus('testing');
+    try {
+      const client = new OpenShiftClient({
+        baseUrl: trimmedUrl,
+        namespace: trimmedNamespace,
+        token,
+        ignoreSsl: formState.ignoreSsl,
+        caBundle: formState.caBundle,
+      });
+      await client.listPods({ namespace: trimmedNamespace });
+      showToast('success', `Connected to ${trimmedNamespace}`);
+      trackEvent(trello, 'settings-test-connection', { result: 'success' });
+    } catch (error) {
+      let message = 'Unable to reach the cluster. Double-check credentials.';
+      if (error instanceof OpenShiftRequestError) {
+        message = error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      showToast('error', message);
+      trackEvent(trello, 'settings-test-connection', { result: 'error', message });
+    } finally {
+      setTestStatus('idle');
+    }
+  };
+
+  const progressLabel =
+    status === 'saving' ? 'Saving settings…' : testStatus === 'testing' ? 'Testing connection…' : null;
 
   return (
     <main className="inner-page" style={{ maxWidth: '640px' }} data-theme={theme}>
@@ -75,10 +149,6 @@ const BoardSettingsPage = () => {
           <input type="text" value={formState.namespace} onChange={handleChange('namespace')} required />
         </label>
         <label>
-          <span>Login display alias</span>
-          <input type="text" value={formState.loginAlias} onChange={handleChange('loginAlias')} />
-        </label>
-        <label>
           <span>Service-account token</span>
           <textarea
             value={tokenInput}
@@ -87,32 +157,44 @@ const BoardSettingsPage = () => {
             rows={3}
           />
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <label className="settings-form__checkbox">
           <input type="checkbox" checked={formState.ignoreSsl} onChange={handleChange('ignoreSsl')} />
           <span>Ignore SSL verification</span>
         </label>
-        <label>
-          <span>Custom CA bundle (PEM)</span>
-          <textarea
-            value={formState.caBundle ?? ''}
-            onChange={(event) => setFormState((prev) => ({ ...prev, caBundle: event.target.value }))}
-            rows={3}
-            placeholder="-----BEGIN CERTIFICATE-----"
-          />
-        </label>
-        <button type="submit" disabled={!trello || status === 'saving'}>
-          {status === 'saving' ? 'Saving…' : 'Save settings'}
-        </button>
+        <div className="settings-actions">
+          <button type="submit" disabled={!trello || status === 'saving'}>
+            {status === 'saving' ? 'Saving…' : 'Save settings'}
+          </button>
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={handleTestConnection}
+            disabled={!trello || status === 'saving' || testStatus === 'testing'}
+          >
+            {testStatus === 'testing' ? 'Testing…' : 'Test connection'}
+          </button>
+          {progressLabel && (
+            <span className="settings-progress" role="status">
+              <span className="settings-progress__spinner" aria-hidden="true" />
+              {progressLabel}
+            </span>
+          )}
+        </div>
       </form>
       <section style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#475569' }}>
         <p className="eyebrow">Security notes</p>
         <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
           <li>Tokens are stored via Trello secrets; leave the field blank to keep the current token.</li>
-          <li>Provide a PEM-encoded CA bundle if your cluster uses a custom certificate authority.</li>
-          <li>Use Ignore SSL only for trusted staging clusters—production should rely on CA bundles.</li>
+          <li>Use Ignore SSL only when testing against trusted staging clusters.</li>
+          <li>Run Test connection after edits to confirm Trello can reach your cluster.</li>
         </ul>
       </section>
       {status === 'idle' && <p className="eyebrow">Waiting for Trello iframe…</p>}
+      {toast && (
+        <div className="toast-stack" aria-live="polite">
+          <div className={`toast toast--${toast.tone}`}>{toast.message}</div>
+        </div>
+      )}
     </main>
   );
 };
