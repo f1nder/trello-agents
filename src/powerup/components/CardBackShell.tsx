@@ -416,7 +416,7 @@ const CardBackShell = () => {
               <StatusIndicator phase={pod.phase} />
             </div>
             <div className="pod-row__meta">
-              <strong>{pod.name}</strong>
+              <strong>{pod.displayName ?? pod.name}</strong>
               <span
                 className="pod-row__time"
                 title={`Started ${new Date(pod.startedAt).toLocaleString()}`}

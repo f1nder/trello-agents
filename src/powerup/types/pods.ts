@@ -9,6 +9,11 @@ export interface PodOwnerReference {
 export interface AgentPod {
   id: string;
   name: string;
+  /**
+   * Human-friendly name for display. When available, this prefers
+   * Kubernetes metadata.annotations.jobName; otherwise falls back to `name`.
+   */
+  displayName?: string;
   phase: PodPhase;
   cardId: string;
   namespace: string;

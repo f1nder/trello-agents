@@ -121,9 +121,15 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
   const terminatedFinished = state?.terminated?.finishedAt;
   const runtimeStart = runningStarted ?? terminatedStarted ?? resource.status?.startTime;
   const runtimeEnd = terminatedFinished ?? null;
+  // Prefer jobName from annotations for display when available
+  const jobName = resource.metadata.annotations?.jobName;
+  const displayName = jobName && jobName.length > 0
+    ? jobName
+    : (resource.metadata.name ?? "unknown");
   return {
     id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
     name: resource.metadata.name ?? "unknown",
+    displayName,
     phase: coercePhase(resource.status?.phase),
     cardId: resource.metadata.labels?.trelloCardId ?? "",
     namespace: resource.metadata.namespace ?? "",
@@ -525,6 +531,7 @@ interface KubernetesMetadata {
   namespace?: string;
   uid?: string;
   labels?: Record<string, string>;
+  annotations?: Record<string, string>;
   ownerReferences?: KubernetesOwnerReference[];
 }
 
