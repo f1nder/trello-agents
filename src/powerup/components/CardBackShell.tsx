@@ -100,12 +100,15 @@ const StatusIndicator = ({ phase }: { phase: string }) => {
 const formatRuntime = (
   startTimestamp: string,
   nowMs: number = Date.now(),
-  endTimestamp?: string | null,
+  endTimestamp?: string | null
 ): string => {
   const start = Date.parse(startTimestamp);
   if (Number.isNaN(start)) return "–";
   const endMs = endTimestamp ? Date.parse(endTimestamp) : nowMs;
-  const diffSec = Math.max(0, Math.floor(((Number.isNaN(endMs) ? nowMs : endMs) - start) / 1000));
+  const diffSec = Math.max(
+    0,
+    Math.floor(((Number.isNaN(endMs) ? nowMs : endMs) - start) / 1000)
+  );
   const minutes = Math.floor(diffSec / 60);
   const seconds = diffSec % 60;
   const mm = String(minutes);
@@ -406,46 +409,62 @@ const CardBackShell = () => {
 
       <section className="pod-list">
         {sortedPods.map((pod) => {
-          const isNew = initializedRef.current && !seenPodIdsRef.current.has(pod.id);
+          const isNew =
+            initializedRef.current && !seenPodIdsRef.current.has(pod.id);
           const kind = inferStatusKind(pod.phase);
           const rowClass =
-            "pod-row" + (isNew ? " pod-row--enter" : "") + (kind === "pending" ? " pod-row--dimmed" : "");
+            "pod-row" +
+            (isNew ? " pod-row--enter" : "") +
+            (kind === "pending" ? " pod-row--dimmed" : "");
           return (
-          <article key={pod.id} className={rowClass}>
-            <div className="pod-row__status">
-              <StatusIndicator phase={pod.phase} />
-            </div>
-            <div className="pod-row__meta">
-              <strong>{pod.displayName ?? pod.name}</strong>
-              <span
-                className="pod-row__time"
-                title={`Started ${new Date(pod.startedAt).toLocaleString()}`}
-              >
-                {pod.agent || pod.model ? (
-                  <span className="pod-row__agentline">
-                    agent: <span className="pod-row__agentname">{pod.agent ?? "?"}</span>
-                    {pod.model ? <span className="pod-row__modelline">  model: {pod.model}</span> : null}
-                  </span>
-                ) : null}
-                {pod.agent || pod.model ? " · " : ""}
-                {formatRuntime(pod.runtimeStart ?? pod.startedAt, now, pod.runtimeEnd)} · {pod.lastEvent ?? "no events yet"}
-              </span>
-            </div>
-            <div className="pod-row__actions">
-              <PodActions
-                pod={pod}
-                onStop={handleStopPod}
-                onStreamLogs={handleStreamLogs}
-                disabled={
-                  !trello || !openShiftClient || readinessHints.length > 0
-                }
-                isStopping={pendingStopIds.has(pod.id)}
-                variant="compact"
-                showStop={inferStatusKind(pod.phase) === "running"}
-              />
-            </div>
-          </article>
-        );})}
+            <article key={pod.id} className={rowClass}>
+              <div className="pod-row__status">
+                <StatusIndicator phase={pod.phase} />
+              </div>
+              <div className="pod-row__meta">
+                <strong>{pod.displayName ?? pod.name}</strong>
+                <span
+                  className="pod-row__time"
+                  title={`Started ${new Date(pod.startedAt).toLocaleString()}`}
+                >
+                  {pod.agent || pod.model ? (
+                    <span className="pod-row__agentline">
+                      <span className="pod-row__agentname">
+                        {pod.agent ?? "?"}
+                      </span>
+                      {pod.model ? (
+                        <span className="pod-row__modelline">
+                          {" · "}
+                          {pod.model}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  {pod.agent || pod.model ? " · " : ""}
+                  {formatRuntime(
+                    pod.runtimeStart ?? pod.startedAt,
+                    now,
+                    pod.runtimeEnd
+                  )}{" "}
+                  · {pod.lastEvent ?? "no events yet"}
+                </span>
+              </div>
+              <div className="pod-row__actions">
+                <PodActions
+                  pod={pod}
+                  onStop={handleStopPod}
+                  onStreamLogs={handleStreamLogs}
+                  disabled={
+                    !trello || !openShiftClient || readinessHints.length > 0
+                  }
+                  isStopping={pendingStopIds.has(pod.id)}
+                  variant="compact"
+                  showStop={inferStatusKind(pod.phase) === "running"}
+                />
+              </div>
+            </article>
+          );
+        })}
         {isAwaitingInitialPods &&
           Array.from({ length: 2 }).map((_, index) => (
             <article

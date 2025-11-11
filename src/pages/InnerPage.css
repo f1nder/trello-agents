@@ -163,7 +163,7 @@
 }
 
 .pod-row__agentname {
-  color: #fff;
+  color: var(--ca-text-subtle);
   font-weight: 700;
 }
 
