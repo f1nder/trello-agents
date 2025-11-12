@@ -252,11 +252,22 @@ const LogStreamModal = () => {
     return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   };
 
+  const podTitle = useMemo(() => {
+    if (!pod) {
+      return "Pod";
+    }
+    const jobLabel = pod.displayName ?? pod.jobName ?? null;
+    if (jobLabel && jobLabel !== pod.name) {
+      return `${jobLabel} / ${pod.name}`;
+    }
+    return jobLabel ?? pod.name;
+  }, [pod]);
+
   return (
     <main className="inner-page" style={{ gap: "1rem" }} data-theme={theme}>
       <header>
         <p className="eyebrow">Pod</p>
-        <h1>{pod ? pod.name : "Pod"}</h1>
+        <h1>{podTitle}</h1>
         <p className="lede" style={{ marginBottom: 0 }}>
           {pod
             ? `Namespace ${pod.namespace} · container ${
