@@ -9,6 +9,8 @@ import { getPreviewConfig } from "../utils/preview";
 import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
 import "../../styles/index.css";
 import "../../pages/InnerPage.css";
+import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
+import { getDisplayableError } from "../utils/errors";
 
 const TAB_OPTIONS = [
   {
@@ -81,6 +83,7 @@ const LogStreamModal = () => {
   const abortRef = useRef<AbortController | null>(null);
   const [isStopping, setIsStopping] = useState(false);
   const previewConfig = getPreviewConfig();
+  const displayableError = getDisplayableError(error);
 
   const pod = trello?.arg<AgentPod>("pod");
   const previewClient = previewConfig?.openShiftClient ?? null;
@@ -270,9 +273,20 @@ const LogStreamModal = () => {
             flexWrap: "wrap",
           }}
         >
-          <p className="eyebrow" style={{ margin: 0 }}>
-            Status: {status}
-          </p>
+          <div
+            className="eyebrow"
+            style={{
+              margin: 0,
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+            title={`Log stream status: ${status}`}
+          >
+            <ConnectionStatusIndicator
+              status={status}
+              label={`Log stream status: ${status}`}
+            />
+          </div>
           <div
             className="log-toolbar"
             role="toolbar"
@@ -334,9 +348,9 @@ const LogStreamModal = () => {
         {settingsStatus !== "ready" && (
           <p className="eyebrow">Loading board settings…</p>
         )}
-        {error && (
+        {displayableError && (
           <p style={{ color: "var(--ca-error-text)", margin: 0 }}>
-            {error.message}. Verify the token permits log streaming for this
+            {displayableError.message}. Verify the token permits log streaming for this
             namespace.
           </p>
         )}
