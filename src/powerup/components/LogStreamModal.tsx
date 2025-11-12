@@ -78,6 +78,121 @@ const TAB_OPTIONS = [
 
 const textDecoder = new TextDecoder();
 
+type StatusKind = "running" | "pending" | "complete" | "error";
+
+const statusFamilies: Record<StatusKind, string[]> = {
+  running: ["running"],
+  pending: [
+    "pending",
+    "initialize",
+    "initializing",
+    "containercreating",
+    "queued",
+    "waiting",
+  ],
+  complete: ["succeeded", "completed", "complete"],
+  error: [
+    "failed",
+    "error",
+    "unknown",
+    "terminating",
+    "crashloopbackoff",
+    "evicted",
+  ],
+};
+
+const inferStatusKind = (phase: string): StatusKind => {
+  const normalized = phase.toLowerCase();
+  if (statusFamilies.running.includes(normalized)) {
+    return "running";
+  }
+  if (statusFamilies.pending.includes(normalized)) {
+    return "pending";
+  }
+  if (statusFamilies.complete.includes(normalized)) {
+    return "complete";
+  }
+  if (statusFamilies.error.includes(normalized)) {
+    return "error";
+  }
+  return "pending";
+};
+
+const StatusIndicator = ({ phase }: { phase: string }) => {
+  const kind = inferStatusKind(phase);
+  let visual: React.ReactNode;
+  if (kind === "running") {
+    visual = <span className="status-indicator__spinner" aria-hidden="true" />;
+  } else if (kind === "complete") {
+    visual = (
+      <svg
+        className="status-indicator__icon status-indicator__icon--complete"
+        viewBox="0 0 16 16"
+        width="18"
+        height="18"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm3.78-9.72a.751.751 0 0 0-.018-1.042.751.751 0 0 0-1.042-.018L6.75 9.19 5.28 7.72a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042l2 2a.75.75 0 0 0 1.06 0Z" />
+      </svg>
+    );
+  } else if (kind === "error") {
+    visual = (
+      <span
+        className="status-indicator__dot status-indicator__dot--error"
+        aria-hidden="true"
+      />
+    );
+  } else {
+    visual = (
+      <span
+        className="status-indicator__dot status-indicator__dot--pending"
+        aria-hidden="true"
+      />
+    );
+  }
+  return (
+    <span className="status-indicator" role="img" aria-label={`${phase} pod`}>
+      {visual}
+      <span className="sr-only">{phase}</span>
+    </span>
+  );
+};
+
+const renderStatusIndicator = (
+  status: "idle" | "connecting" | "streaming" | "error"
+) => {
+  const labelMap: Record<typeof status, string> = {
+    idle: "Idle",
+    connecting: "Connecting",
+    streaming: "Connected",
+    error: "Error",
+  };
+  const label = labelMap[status];
+  const dotClass =
+    status === "streaming"
+      ? "status-indicator__dot status-indicator__dot--connected"
+      : status === "error"
+      ? "status-indicator__dot status-indicator__dot--error"
+      : "status-indicator__dot status-indicator__dot--pending";
+
+  return (
+    <span
+      className="status-indicator"
+      role="status"
+      aria-live="polite"
+      title={`Log stream: ${label}`}
+    >
+      {status === "connecting" ? (
+        <span className="status-indicator__spinner" aria-hidden="true" />
+      ) : (
+        <span className={dotClass} aria-hidden="true" />
+      )}
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+};
+
 const LogStreamModal = () => {
   const trello = usePowerUpClient();
   const theme = useAppliedTrelloTheme(trello);
@@ -299,44 +414,12 @@ const LogStreamModal = () => {
   }, [pod]);
 
   return (
-    <main className="inner-page" style={{ gap: "1rem" }} data-theme={theme}>
+    <main className="inner-page" style={{ gap: "0.5rem" }} data-theme={theme}>
       <header>
-        {/* Title + stream indicator in one row */}
+        {/* Title row */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {(() => {
-            const labelMap: Record<typeof status, string> = {
-              idle: "Idle",
-              connecting: "Connecting",
-              streaming: "Connected",
-              error: "Error",
-            };
-            const label = labelMap[status];
-            const dotClass =
-              status === "streaming"
-                ? "status-indicator__dot status-indicator__dot--connected"
-                : status === "error"
-                ? "status-indicator__dot status-indicator__dot--error"
-                : "status-indicator__dot status-indicator__dot--pending";
-            return (
-              <span
-                className="status-indicator"
-                role="status"
-                aria-live="polite"
-                title={`Log stream: ${label}`}
-              >
-                {status === "connecting" ? (
-                  <span
-                    className="status-indicator__spinner"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <span className={dotClass} aria-hidden="true" />
-                )}
-                <span className="sr-only">{label}</span>
-              </span>
-            );
-          })()}
-          <h2 style={{ margin: 0 }}>{podTitle}</h2>
+          {pod && <StatusIndicator phase={pod.phase} />}
+          <h2 style={{ margin: "1.5rem 0" }}>{podTitle}</h2>
         </div>
 
         <div
@@ -352,7 +435,11 @@ const LogStreamModal = () => {
             className="log-toolbar"
             role="toolbar"
             aria-label="Log controls"
-            style={{ width: "100%", justifyContent: "space-between" }}
+            style={{
+              paddingLeft: "0.5rem",
+              width: "100%",
+              justifyContent: "space-between",
+            }}
           >
             <div className="segmented" role="tablist" aria-label="Log views">
               {TAB_OPTIONS.map(({ id, label, icon }) => (
@@ -366,6 +453,7 @@ const LogStreamModal = () => {
                   }`}
                   onClick={() => setTab(id)}
                 >
+                  {id === "logs" && renderStatusIndicator(status)}
                   {icon}
                   <span>{label}</span>
                 </button>
@@ -443,7 +531,8 @@ const LogStreamModal = () => {
             color: "var(--ca-log-text)",
             borderRadius: "0.75rem",
             padding: "1rem",
-            height: "420px",
+            height: "600px",
+            maxHeight: "600px",
             overflow: "auto",
             position: "relative",
             fontFamily: '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
