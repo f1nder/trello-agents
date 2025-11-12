@@ -57,6 +57,21 @@ const TAB_OPTIONS = [
       </svg>
     ),
   },
+  {
+    id: "prompts" as const,
+    label: "Prompts",
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M4 6h16M4 12h16M4 18h10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
 ];
 
 const textDecoder = new TextDecoder();
@@ -74,7 +89,7 @@ const LogStreamModal = () => {
     "idle" | "connecting" | "streaming" | "error"
   >("idle");
   const [error, setError] = useState<Error | null>(null);
-  const [tab, setTab] = useState<"logs" | "info">("logs");
+  const [tab, setTab] = useState<"logs" | "info" | "prompts">("logs");
   const [follow, setFollow] = useState(true);
   const logsRef = useRef<HTMLDivElement | null>(null);
   const isAutoScrollingRef = useRef(false);
@@ -99,6 +114,26 @@ const LogStreamModal = () => {
       caBundle: settings.caBundle,
     });
   }, [previewClient, settings, token]);
+
+  // Build OpenShift Console Pod URL in the requested form:
+  // https://<host>:<port>/console/project/<ns>/browse/pods/<pod>?tab=details
+  const getConsolePodUrl = (
+    clusterUrl: string | undefined,
+    namespace: string,
+    podName: string
+  ): string | null => {
+    if (!clusterUrl) return null;
+    try {
+      const u = new URL(clusterUrl);
+      const base = `${u.protocol}//${u.host}`; // keep protocol + host(+port)
+      const path = `/console/project/${encodeURIComponent(
+        namespace
+      )}/browse/pods/${encodeURIComponent(podName)}?tab=details`;
+      return `${base}${path}`;
+    } catch {
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (!pod || !openShiftClient) {
@@ -252,15 +287,41 @@ const LogStreamModal = () => {
   return (
     <main className="inner-page" style={{ gap: "1rem" }} data-theme={theme}>
       <header>
-        <p className="eyebrow">Pod</p>
-        <h1>{pod ? pod.name : "Pod"}</h1>
-        <p className="lede" style={{ marginBottom: 0 }}>
-          {pod
-            ? `Namespace ${pod.namespace} · container ${
-                pod.containers[0] ?? "default"
-              }`
-            : "Waiting for pod context from Trello…"}
-        </p>
+        {/* Title + stream indicator in one row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {(() => {
+            const labelMap: Record<typeof status, string> = {
+              idle: "Idle",
+              connecting: "Connecting",
+              streaming: "Connected",
+              error: "Error",
+            };
+            const label = labelMap[status];
+            const dotClass =
+              status === "streaming"
+                ? "status-indicator__dot status-indicator__dot--connected"
+                : status === "error"
+                ? "status-indicator__dot status-indicator__dot--error"
+                : "status-indicator__dot status-indicator__dot--pending";
+            return (
+              <span
+                className="status-indicator"
+                role="status"
+                aria-live="polite"
+                title={`Log stream: ${label}`}
+              >
+                {status === "connecting" ? (
+                  <span className="status-indicator__spinner" aria-hidden="true" />
+                ) : (
+                  <span className={dotClass} aria-hidden="true" />
+                )}
+                <span className="sr-only">{label}</span>
+              </span>
+            );
+          })()}
+          <h2 style={{ margin: 0 }}>{pod ? pod.name : "Pod"}</h2>
+        </div>
+
         <div
           style={{
             display: "flex",
@@ -270,13 +331,11 @@ const LogStreamModal = () => {
             flexWrap: "wrap",
           }}
         >
-          <p className="eyebrow" style={{ margin: 0 }}>
-            Status: {status}
-          </p>
           <div
             className="log-toolbar"
             role="toolbar"
             aria-label="Log controls"
+            style={{ width: "100%", justifyContent: "space-between" }}
           >
             <div className="segmented" role="tablist" aria-label="Log views">
               {TAB_OPTIONS.map(({ id, label, icon }) => (
@@ -285,7 +344,9 @@ const LogStreamModal = () => {
                   type="button"
                   role="tab"
                   aria-selected={tab === id}
-                  className={`segmented__button ${tab === id ? "is-active" : ""}`}
+                  className={`segmented__button ${
+                    tab === id ? "is-active" : ""
+                  }`}
                   onClick={() => setTab(id)}
                 >
                   {icon}
@@ -343,12 +404,14 @@ const LogStreamModal = () => {
       </header>
       {tab === "logs" && (
         <section
+          className="tab-panel"
           ref={logsRef}
           onScroll={(e) => {
             const el = logsRef.current;
             // Only treat user-initiated scrolling as an intent to stop following
-            const isUser = (e as unknown as { nativeEvent?: { isTrusted?: boolean } })
-              ?.nativeEvent?.isTrusted === true;
+            const isUser =
+              (e as unknown as { nativeEvent?: { isTrusted?: boolean } })
+                ?.nativeEvent?.isTrusted === true;
             if (!el) return;
 
             if (!isUser) return; // ignore programmatic scrolls
@@ -406,6 +469,7 @@ const LogStreamModal = () => {
       )}
       {tab === "info" && (
         <section
+          className="tab-panel"
           style={{
             background: "var(--ca-surface)",
             color: "var(--ca-text)",
@@ -429,6 +493,32 @@ const LogStreamModal = () => {
               <dd style={{ margin: 0 }}>{pod.name}</dd>
               <dt className="eyebrow">Namespace</dt>
               <dd style={{ margin: 0 }}>{pod.namespace}</dd>
+              {settings?.clusterUrl && (
+                <>
+                  <dt className="eyebrow">OpenShift</dt>
+                  <dd style={{ margin: 0 }}>
+                    {(() => {
+                      const href = getConsolePodUrl(
+                        settings.clusterUrl,
+                        pod.namespace,
+                        pod.name
+                      );
+                      return href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open in OpenShift Console"
+                        >
+                          Open in OpenShift Console ↗
+                        </a>
+                      ) : (
+                        <span style={{ opacity: 0.7 }}>Link unavailable</span>
+                      );
+                    })()}
+                  </dd>
+                </>
+              )}
               <dt className="eyebrow">Phase</dt>
               <dd style={{ margin: 0 }}>{pod.phase}</dd>
               <dt className="eyebrow">Started</dt>
@@ -465,6 +555,57 @@ const LogStreamModal = () => {
               )}
             </dl>
           )}
+        </section>
+      )}
+      {tab === "prompts" && (
+        <section className="tab-panel" style={{ display: "grid", gap: "1rem" }}>
+          <div>
+            <p className="eyebrow" style={{ margin: "0 0 0.5rem 0" }}>
+              PROMPT
+            </p>
+            <div
+              style={{
+                background: "var(--ca-log-bg)",
+                color: "var(--ca-log-text)",
+                borderRadius: "0.75rem",
+                padding: "1rem",
+                height: "150px",
+                overflow: "auto",
+                position: "relative",
+                fontFamily:
+                  '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                {pod?.prompt ?? "—"}
+              </pre>
+            </div>
+          </div>
+
+          <div>
+            <p className="eyebrow" style={{ margin: "0 0 0.5rem 0" }}>
+              AGENT_RULES
+            </p>
+            <div
+              style={{
+                background: "var(--ca-log-bg)",
+                color: "var(--ca-log-text)",
+                borderRadius: "0.75rem",
+                padding: "1rem",
+                height: "350px",
+                overflow: "auto",
+                position: "relative",
+                fontFamily:
+                  '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                {pod?.agentRules ?? "—"}
+              </pre>
+            </div>
+          </div>
         </section>
       )}
       {!trello && (

@@ -361,8 +361,27 @@ const PreviewApp = () => {
                 </p>
                 <h2 style={{ margin: 0 }}>Stream Logs</h2>
               </div>
-              <button type="button" onClick={closeModal}>
-                Close
+              <button
+                type="button"
+                onClick={closeModal}
+                className="icon-button"
+                aria-label="Close modal"
+                title="Close"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
             </header>
             <div style={{ padding: "1.25rem" }}>

@@ -132,6 +132,8 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
   const env = primarySpec?.env ?? [];
   const agentEnv = env.find((e) => (e.name ?? "").toUpperCase() === "AGENT")?.value;
   const modelEnv = env.find((e) => (e.name ?? "").toUpperCase() === "MODEL")?.value;
+  const promptEnv = env.find((e) => (e.name ?? "").toUpperCase() === "PROMPT")?.value;
+  const agentRulesEnv = env.find((e) => (e.name ?? "").toUpperCase() === "AGENT_RULES")?.value;
   return {
     id: resource.metadata.uid ?? resource.metadata.name ?? fallbackId,
     name: resource.metadata.name ?? "unknown",
@@ -139,6 +141,8 @@ const mapPodResource = (resource: KubernetesPod): AgentPod => {
     jobName: jobName ?? undefined,
     agent: agentEnv ?? undefined,
     model: modelEnv ?? undefined,
+    prompt: promptEnv ?? undefined,
+    agentRules: agentRulesEnv ?? undefined,
     phase: coercePhase(resource.status?.phase),
     cardId: resource.metadata.labels?.trelloCardId ?? "",
     namespace: resource.metadata.namespace ?? "",

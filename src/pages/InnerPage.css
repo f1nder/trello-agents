@@ -1,6 +1,6 @@
 .inner-page {
   margin: 0 auto;
-  padding: 0.5rem min(3vw, 3rem);
+  padding: 0.1rem min(1vw, 1rem);
   max-width: 960px;
   display: flex;
   flex-direction: column;
@@ -249,8 +249,8 @@
 .status-indicator {
   width: 22px;
   height: 22px;
-
-  background: var(--ca-surface-muted);
+  /* Remove background for dot-only look */
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -305,6 +305,8 @@
 .status-indicator__dot--connected {
   background: var(--ca-status-running-text);
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+  /* Blink to indicate active streaming */
+  animation: status-blink 1.2s ease-in-out infinite;
 }
 
 .sr-only {
@@ -330,6 +332,19 @@
   100% {
     opacity: 0.35;
     transform: scale(0.85);
+  }
+}
+
+/* Blink effect for connected stream */
+@keyframes status-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
@@ -505,6 +520,10 @@
     transition: none !important;
     animation: none !important;
   }
+  .status-indicator__dot,
+  .status-indicator__spinner {
+    animation: none !important;
+  }
 }
 
 /* Minimal Tabs */
@@ -550,6 +569,28 @@
   background: linear-gradient(90deg, var(--ca-accent), rgba(37, 99, 235, 0.6));
   border-radius: 2px;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* Fade-in animation when switching tabs */
+.tab-panel {
+  animation: tab-fade 220ms ease-out;
+}
+
+@keyframes tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel {
+    animation: none !important;
+  }
 }
 
 /* Log header toolbar (modern segmented) */
@@ -618,14 +659,12 @@
 
 /* Danger action (Stop) styled to stand apart */
 .segmented__button--danger {
-  border: 1px solid rgba(248, 113, 113, 0.45);
-  background: linear-gradient(
-    120deg,
-    var(--ca-issue-bg),
-    rgba(248, 113, 113, 0.08)
-  );
-  color: var(--ca-issue-text);
-  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.15);
+  /* Make Stop button clearly red and centered vertically */
+  align-self: center;
+  border: 1px solid rgba(239, 68, 68, 0.85);
+  background: linear-gradient(120deg, #ef4444, #dc2626);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.3);
 }
 
 .segmented__button--danger:hover:not(:disabled),
@@ -643,8 +682,8 @@
 }
 
 .segmented__button--danger .segmented__spinner {
-  border: 2px solid rgba(248, 113, 113, 0.35);
-  border-top-color: var(--ca-issue-text);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
 }
 
 /* Log canvas follow control */

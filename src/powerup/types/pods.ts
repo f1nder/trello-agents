@@ -20,6 +20,10 @@ export interface AgentPod {
   agent?: string;
   /** Optional model name from pod env var MODEL */
   model?: string;
+  /** Optional prompt text from pod env var PROMPT */
+  prompt?: string;
+  /** Optional agent rules text from pod env var AGENT_RULES */
+  agentRules?: string;
   phase: PodPhase;
   cardId: string;
   namespace: string;
