@@ -9,6 +9,8 @@ import { getPreviewConfig } from "../utils/preview";
 import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
 import "../../styles/index.css";
 import "../../pages/InnerPage.css";
+import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
+import { getDisplayableError } from "../utils/errors";
 
 const TAB_OPTIONS = [
   {
@@ -96,6 +98,7 @@ const LogStreamModal = () => {
   const abortRef = useRef<AbortController | null>(null);
   const [isStopping, setIsStopping] = useState(false);
   const previewConfig = getPreviewConfig();
+  const displayableError = getDisplayableError(error);
 
   const pod = trello?.arg<AgentPod>("pod");
   const previewClient = previewConfig?.openShiftClient ?? null;
@@ -284,6 +287,17 @@ const LogStreamModal = () => {
     return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   };
 
+  const podTitle = useMemo(() => {
+    if (!pod) {
+      return "Pod";
+    }
+    const jobLabel = pod.displayName ?? pod.jobName ?? null;
+    if (jobLabel && jobLabel !== pod.name) {
+      return `${jobLabel}`;
+    }
+    return jobLabel ?? pod.name;
+  }, [pod]);
+
   return (
     <main className="inner-page" style={{ gap: "1rem" }} data-theme={theme}>
       <header>
@@ -311,7 +325,10 @@ const LogStreamModal = () => {
                 title={`Log stream: ${label}`}
               >
                 {status === "connecting" ? (
-                  <span className="status-indicator__spinner" aria-hidden="true" />
+                  <span
+                    className="status-indicator__spinner"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <span className={dotClass} aria-hidden="true" />
                 )}
@@ -319,7 +336,7 @@ const LogStreamModal = () => {
               </span>
             );
           })()}
-          <h2 style={{ margin: 0 }}>{pod ? pod.name : "Pod"}</h2>
+          <h2 style={{ margin: 0 }}>{podTitle}</h2>
         </div>
 
         <div
@@ -395,10 +412,10 @@ const LogStreamModal = () => {
         {settingsStatus !== "ready" && (
           <p className="eyebrow">Loading board settings…</p>
         )}
-        {error && (
+        {displayableError && (
           <p style={{ color: "var(--ca-error-text)", margin: 0 }}>
-            {error.message}. Verify the token permits log streaming for this
-            namespace.
+            {displayableError.message}. Verify the token permits log streaming
+            for this namespace.
           </p>
         )}
       </header>

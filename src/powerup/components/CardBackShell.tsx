@@ -15,6 +15,8 @@ import "../../styles/index.css";
 import "../../pages/InnerPage.css";
 import { trackEvent } from "../utils/analytics";
 import { confirmPodDeletion } from "../utils/confirmPodDeletion";
+import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
+import { isIgnorableNetworkError } from "../utils/errors";
 
 type StatusKind = "running" | "pending" | "complete" | "error";
 
@@ -274,9 +276,9 @@ const CardBackShell = () => {
     readinessHints.push("Fetching Trello card metadata…");
   }
 
-  const issues = [settingsError, cardError, livePods.error].filter(
-    Boolean
-  ) as Error[];
+  const issues = (
+    [settingsError, cardError, livePods.error].filter(Boolean) as Error[]
+  ).filter((issue) => !isIgnorableNetworkError(issue));
 
   // tick every second so runtime includes seconds
   const [now, setNow] = useState(() => Date.now());
@@ -288,7 +290,7 @@ const CardBackShell = () => {
   return (
     <main className="inner-page" data-card-back data-theme={theme}>
       <header>
-        <p
+        <div
           className="eyebrow"
           style={{
             display: "flex",
@@ -297,45 +299,13 @@ const CardBackShell = () => {
             gap: "0.5rem",
             margin: 0,
           }}
+          title={`Stream status: ${livePods.status}`}
         >
-          {/* Stream connection indicator: dot-only with optional label */}
-          {(() => {
-            const s = livePods.status;
-            if (s === "error") {
-              return (
-                <>
-                  <span
-                    className="status-indicator__dot status-indicator__dot--error"
-                    aria-hidden="true"
-                  />
-                </>
-              );
-            }
-            if (s === "connecting" || s === "loading") {
-              return (
-                <>
-                  <span
-                    className="status-indicator__dot status-indicator__dot--pending"
-                    aria-hidden="true"
-                  />
-                </>
-              );
-            }
-            if (s === "streaming") {
-              return (
-                <>
-                  <span>ok</span>
-                  <span
-                    className="status-indicator__dot status-indicator__dot--connected"
-                    aria-hidden="true"
-                  />
-                </>
-              );
-            }
-            // idle or unknown → show nothing (no label)
-            return null;
-          })()}
-        </p>
+          <ConnectionStatusIndicator
+            status={livePods.status}
+            label={`Agent stream status: ${livePods.status}`}
+          />
+        </div>
         {readinessHints.length > 0 && (
           <ul
             style={{
