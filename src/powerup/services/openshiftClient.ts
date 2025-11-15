@@ -444,10 +444,9 @@ export class OpenShiftClient implements OpenShiftPodApi {
   private buildPodUrl(params: ListPodsParams & { watch: boolean }): string {
     const namespace = params.namespace ?? this.config.namespace;
     const url = new URL(`/api/v1/namespaces/${namespace}/pods`, this.baseUrl);
-    url.searchParams.set(
-      "fieldSelector",
-      params.fieldSelector ?? "status.phase!=Failed"
-    );
+    if (params.fieldSelector) {
+      url.searchParams.set("fieldSelector", params.fieldSelector);
+    }
     if (params.watch) {
       url.searchParams.set("watch", "true");
     }
