@@ -317,6 +317,7 @@ const LogStreamModal = () => {
           namespace: pod.namespace,
           container: pod.containers[0],
           signal: abortController.signal,
+          tailLines: 10000,
         });
         setStatus("streaming");
         let buffered = "";

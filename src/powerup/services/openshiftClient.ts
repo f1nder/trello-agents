@@ -50,6 +50,19 @@ export interface StreamLogsOptions {
   namespace?: string;
   container?: string;
   signal?: AbortSignal;
+  /**
+   * Number of lines to include from the end of the log prior to streaming.
+   * Mirrors Kubernetes `tailLines` query param.
+   */
+  tailLines?: number;
+  /**
+   * Limit the duration of logs to recent seconds. Mirrors Kubernetes `sinceSeconds`.
+   */
+  sinceSeconds?: number;
+  /**
+   * Maximum bytes to return. Mirrors Kubernetes `limitBytes`.
+   */
+  limitBytes?: number;
 }
 
 export interface OpenShiftPodApi {
@@ -375,6 +388,15 @@ export class OpenShiftClient implements OpenShiftPodApi {
     );
     url.searchParams.set("follow", "true");
     url.searchParams.set("timestamps", "true");
+    if (options.tailLines != null) {
+      url.searchParams.set("tailLines", String(options.tailLines));
+    }
+    if (options.sinceSeconds != null) {
+      url.searchParams.set("sinceSeconds", String(options.sinceSeconds));
+    }
+    if (options.limitBytes != null) {
+      url.searchParams.set("limitBytes", String(options.limitBytes));
+    }
     if (options.container) {
       url.searchParams.set("container", options.container);
     }
