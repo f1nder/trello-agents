@@ -563,14 +563,13 @@ const LogStreamModal = () => {
         <section className="tab-panel" style={{ padding: 0 }}>
           <div
             style={{
-              height: "clamp(420px, 60vh, 70vh)",
+              height: "560px",
               display: "flex",
               flexDirection: "column",
             }}
           >
             <div
               style={{
-                background: "var(--ca-log-bg)",
                 color: "var(--ca-log-text)",
                 borderRadius: "0.75rem",
                 padding: "0.5rem 0.75rem 0.75rem",
