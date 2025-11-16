@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+  useCallback,
+} from "react";
 import { usePowerUpClient } from "../hooks/usePowerUpClient";
 import { useClusterSettings } from "../hooks/useClusterSettings";
 import { OpenShiftClient } from "../services/openshiftClient";
@@ -7,6 +14,7 @@ import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 import type { OpenShiftPodApi } from "../services/openshiftClient";
 import { getPreviewConfig } from "../utils/preview";
 import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
+import { LazyLog } from "@melloware/react-logviewer";
 import "../../styles/index.css";
 import "../../pages/InnerPage.css";
 import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
@@ -201,21 +209,51 @@ const LogStreamModal = () => {
     token,
     status: settingsStatus,
   } = useClusterSettings(trello);
-  const [lines, setLines] = useState<string[]>([]);
   const [status, setStatus] = useState<
     "idle" | "connecting" | "streaming" | "error"
   >("idle");
   const [error, setError] = useState<Error | null>(null);
   const [tab, setTab] = useState<"logs" | "info" | "prompts">("logs");
   const [follow, setFollow] = useState(true);
-  const logsRef = useRef<HTMLDivElement | null>(null);
-  const isAutoScrollingRef = useRef(false);
+  const [lineCount, setLineCount] = useState(0);
+  const logRef = useRef<LazyLog | null>(null);
+  const ignoreScrollRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const [isStopping, setIsStopping] = useState(false);
   const previewConfig = getPreviewConfig();
   const displayableError = getDisplayableError(error);
-
   const pod = trello?.arg<AgentPod>("pod");
+  const initialLogText = "";
+  const logKey = pod ? `${pod.namespace}-${pod.name}` : "logs";
+  const handleScroll = useCallback(
+    ({
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+    }: {
+      scrollTop: number;
+      scrollHeight: number;
+      clientHeight: number;
+    }) => {
+      if (ignoreScrollRef.current) return;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isNearBottom = distanceFromBottom <= 8; // small buffer for smooth scroll
+      if (follow && !isNearBottom) {
+        setFollow(false);
+      }
+    },
+    [follow]
+  );
+
+  const resumeFollow = useCallback(() => {
+    ignoreScrollRef.current = true;
+    setFollow(true);
+    // allow LazyLog to settle its own scroll before we listen again
+    setTimeout(() => {
+      ignoreScrollRef.current = false;
+    }, 150);
+  }, []);
+
   const previewClient = previewConfig?.openShiftClient ?? null;
   const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
     if (previewClient) {
@@ -265,7 +303,8 @@ const LogStreamModal = () => {
     let stopWatching: (() => void) | null = null;
 
     // reset UI state on pod change
-    setLines([]);
+    setLineCount(0);
+    setFollow(true);
     setError(null);
 
     const canStreamFromPhase = (phase: string | undefined) =>
@@ -291,7 +330,15 @@ const LogStreamModal = () => {
           buffered = segments.pop() ?? "";
           const nextLines = segments.filter(Boolean);
           if (nextLines.length > 0) {
-            setLines((prev) => [...prev, ...nextLines]);
+            logRef.current?.appendLines(
+              nextLines.map((line) =>
+                line.replace(
+                  /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
+                  ""
+                )
+              )
+            );
+            setLineCount((prev) => prev + nextLines.length);
           }
         }
       } catch (streamError) {
@@ -346,29 +393,6 @@ const LogStreamModal = () => {
     };
   }, [openShiftClient, pod]);
 
-  // Auto-scroll to bottom when following and new lines arrive (or when returning to Logs tab)
-  useEffect(() => {
-    if (tab !== "logs" || !follow) return;
-    const el = logsRef.current;
-    if (!el) return;
-    isAutoScrollingRef.current = true;
-    requestAnimationFrame(() => {
-      try {
-        el.scrollTo({ top: el.scrollHeight });
-      } finally {
-        setTimeout(() => {
-          isAutoScrollingRef.current = false;
-        }, 0);
-      }
-    });
-  }, [lines, tab, follow]);
-
-  const stripTimestamp = (line: string) =>
-    line.replace(
-      /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
-      ""
-    );
-
   const stopPod = async () => {
     if (!pod || !openShiftClient || isStopping) return;
     const confirmed = await confirmPodDeletion(pod, trello);
@@ -394,12 +418,6 @@ const LogStreamModal = () => {
     } finally {
       setIsStopping(false);
     }
-  };
-
-  // Helper to detect whether the logs panel is scrolled to the bottom
-  const isAtBottom = (el: HTMLDivElement) => {
-    const threshold = 4; // px tolerance for float rounding
-    return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   };
 
   const podTitle = useMemo(() => {
@@ -459,6 +477,9 @@ const LogStreamModal = () => {
                 </button>
               ))}
             </div>
+            <span className="eyebrow" style={{ paddingRight: "0.5rem" }}>
+              Rows: {lineCount}
+            </span>
             <button
               type="button"
               className="segmented__button segmented__button--danger"
@@ -508,69 +529,71 @@ const LogStreamModal = () => {
         )}
       </header>
       {tab === "logs" && (
-        <section
-          className="tab-panel"
-          ref={logsRef}
-          onScroll={(e) => {
-            const el = logsRef.current;
-            // Only treat user-initiated scrolling as an intent to stop following
-            const isUser =
-              (e as unknown as { nativeEvent?: { isTrusted?: boolean } })
-                ?.nativeEvent?.isTrusted === true;
-            if (!el) return;
-
-            if (!isUser) return; // ignore programmatic scrolls
-
-            // If the user scrolls away from the bottom, disable follow
-            if (follow && !isAtBottom(el)) {
-              setFollow(false);
-            }
-          }}
-          style={{
-            background: "var(--ca-log-bg)",
-            color: "var(--ca-log-text)",
-            borderRadius: "0.75rem",
-            padding: "1rem",
-            height: "600px",
-            maxHeight: "600px",
-            overflow: "auto",
-            position: "relative",
-            fontFamily: '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
-          }}
-        >
-          <div className="log-follow-container">
-            <button
-              type="button"
-              className={`log-follow ${follow ? "is-active" : ""}`}
-              aria-pressed={follow}
-              onClick={() => {
-                setFollow((f) => !f);
-                if (!follow) {
-                  const el = logsRef.current;
-                  if (el) el.scrollTo({ top: el.scrollHeight });
-                }
+        <section className="tab-panel" style={{ padding: 0 }}>
+          <div style={{ height: "60vh" }}>
+            <div
+              style={{
+                background: "var(--ca-log-bg)",
+                color: "var(--ca-log-text)",
+                borderRadius: "0.75rem",
+                padding: "0.5rem 0.75rem 0.75rem",
+                fontFamily:
+                  '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
+                position: "relative",
+                height: "100%",
               }}
-              title={
-                follow
-                  ? "Following logs (click to pause)"
-                  : "Click to follow tail"
-              }
             >
-              {follow ? "Following" : "Follow"}
-            </button>
+              {!follow && (
+                <div
+                  className="log-follow-container"
+                  style={{ marginBottom: "0.25rem" }}
+                >
+                  <span className="eyebrow" style={{ opacity: 0.8 }}>
+                    Following paused (scroll)
+                  </span>
+                  <button
+                    type="button"
+                    className="log-follow"
+                    onClick={resumeFollow}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Resume
+                  </button>
+                </div>
+              )}
+              {lineCount === 0 ? (
+                <pre style={{ margin: 0, opacity: 0.7, padding: "0 0.5rem" }}>
+                  {pod?.phase === "Pending"
+                    ? "Pod is Pending. Will connect and stream once it starts…"
+                    : "No log output yet…"}
+                </pre>
+              ) : (
+                <LazyLog
+                  key={logKey}
+                  ref={logRef as React.RefObject<LazyLog>}
+                  text={initialLogText}
+                  follow={follow}
+                  onScroll={handleScroll}
+                  enableSearch
+                  enableLineNumbers
+                  enableGutters
+                  selectableLines
+                  external
+                  extraLines={1}
+                  height="600"
+                  width="600"
+                  style={{
+                    background: "transparent",
+                    color: "var(--ca-log-text)",
+                  }}
+                  containerStyle={{
+                    background: "transparent",
+                    color: "var(--ca-log-text)",
+                  }}
+                />
+              )}
+            </div>
           </div>
-          {lines.length === 0 ? (
-            <pre style={{ margin: 0, opacity: 0.7 }}>
-              {pod?.phase === "Pending"
-                ? "Pod is Pending. Will connect and stream once it starts…"
-                : "No log output yet…"}
-            </pre>
-          ) : null}
-          {lines.map((line, index) => (
-            <pre key={`${line}-${index}`} style={{ margin: 0 }}>
-              {stripTimestamp(line)}
-            </pre>
-          ))}
         </section>
       )}
       {tab === "info" && (

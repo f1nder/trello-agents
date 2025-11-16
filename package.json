@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/f1nder/trello-agents#readme",
   "dependencies": {
+    "@melloware/react-logviewer": "^6.3.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
