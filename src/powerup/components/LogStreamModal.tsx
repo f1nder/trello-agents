@@ -320,25 +320,34 @@ const LogStreamModal = () => {
         });
         setStatus("streaming");
         let buffered = "";
-        while (!cancelled) {
-          const { value, done } = await reader.read();
-          if (done || !value) {
-            break;
-          }
-          buffered += textDecoder.decode(value, { stream: true });
+        const flushBuffered = () => {
           const segments = buffered.split("\n");
           buffered = segments.pop() ?? "";
-          const nextLines = segments.filter(Boolean);
-          if (nextLines.length > 0) {
-            logRef.current?.appendLines(
-              nextLines.map((line) =>
-                line.replace(
-                  /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
-                  ""
-                )
+          const nextLines = segments.filter((segment) => segment.length > 0);
+          if (nextLines.length === 0) {
+            return;
+          }
+          logRef.current?.appendLines(
+            nextLines.map((line) =>
+              line.replace(
+                /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
+                ""
               )
-            );
-            setLineCount((prev) => prev + nextLines.length);
+            )
+          );
+          setLineCount((prev) => prev + nextLines.length);
+        };
+
+        while (!cancelled) {
+          const { value, done } = await reader.read();
+          if (value) {
+            buffered += textDecoder.decode(value, { stream: true });
+            flushBuffered();
+          }
+          if (done) {
+            // ensure any trailing partial line is flushed when the stream closes
+            flushBuffered();
+            break;
           }
         }
       } catch (streamError) {
@@ -530,7 +539,13 @@ const LogStreamModal = () => {
       </header>
       {tab === "logs" && (
         <section className="tab-panel" style={{ padding: 0 }}>
-          <div style={{ height: "60vh" }}>
+          <div
+            style={{
+              height: "clamp(420px, 60vh, 70vh)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <div
               style={{
                 background: "var(--ca-log-bg)",
@@ -541,25 +556,20 @@ const LogStreamModal = () => {
                   '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
                 position: "relative",
                 height: "100%",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
+              {/* Resume button positioned in top right corner of LazyLog block when following is paused */}
               {!follow && (
-                <div
-                  className="log-follow-container"
-                  style={{ marginBottom: "0.25rem" }}
+                <button
+                  type="button"
+                  className="log-resume-overflow"
+                  onClick={resumeFollow}
+                  title="Resume log following"
                 >
-                  <span className="eyebrow" style={{ opacity: 0.8 }}>
-                    Following paused (scroll)
-                  </span>
-                  <button
-                    type="button"
-                    className="log-follow"
-                    onClick={resumeFollow}
-                    style={{ marginLeft: "0.5rem" }}
-                  >
-                    Resume
-                  </button>
-                </div>
+                  Resume
+                </button>
               )}
               {lineCount === 0 ? (
                 <pre style={{ margin: 0, opacity: 0.7, padding: "0 0.5rem" }}>
@@ -568,29 +578,35 @@ const LogStreamModal = () => {
                     : "No log output yet…"}
                 </pre>
               ) : (
-                <LazyLog
-                  key={logKey}
-                  ref={logRef as React.RefObject<LazyLog>}
-                  text={initialLogText}
-                  follow={follow}
-                  onScroll={handleScroll}
-                  enableSearch
-                  enableLineNumbers
-                  enableGutters
-                  selectableLines
-                  external
-                  extraLines={1}
-                  height="600"
-                  width="600"
-                  style={{
-                    background: "transparent",
-                    color: "var(--ca-log-text)",
-                  }}
-                  containerStyle={{
-                    background: "transparent",
-                    color: "var(--ca-log-text)",
-                  }}
-                />
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <LazyLog
+                    key={logKey}
+                    ref={logRef as React.RefObject<LazyLog>}
+                    text={initialLogText}
+                    follow={follow}
+                    onScroll={handleScroll}
+                    enableSearch
+                    enableLineNumbers
+                    enableGutters
+                    selectableLines
+                    external
+                    extraLines={1}
+                    height="auto"
+                    width="auto"
+                    style={{
+                      background: "transparent",
+                      color: "var(--ca-log-text)",
+                      height: "100%",
+                      width: "100%",
+                    }}
+                    containerStyle={{
+                      background: "transparent",
+                      color: "var(--ca-log-text)",
+                      height: "100%",
+                      width: "100%",
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>

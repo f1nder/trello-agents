@@ -112,6 +112,24 @@
   color: var(--ca-callout-muted, rgba(255, 255, 255, 0.85));
 }
 
+/* Log viewer theme: mirror prompt/dark panel background */
+.react-log-viewer,
+.react-log-viewer__body,
+.react-log-viewer__line,
+.react-log-viewer__gutter {
+  background: var(--ca-log-bg) !important;
+  color: var(--ca-log-text) !important;
+}
+
+.react-log-viewer__line--even {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.react-log-viewer__search {
+  background: var(--ca-surface) !important;
+  color: var(--ca-text) !important;
+}
+
 .pod-list {
   display: flex;
   flex-direction: column;
@@ -718,5 +736,34 @@
 
 .log-follow.is-active {
   border-color: rgba(59, 130, 246, 0.65);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+}
+
+/* Resume button positioned in top right corner as overflow */
+.log-resume-overflow {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(8px);
+  color: var(--ca-log-text);
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease,
+    transform 120ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.log-resume-overflow:hover,
+.log-resume-overflow:focus-visible {
+  background: rgba(2, 6, 23, 0.95);
+  border-color: rgba(148, 163, 184, 0.6);
+  transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
 }
