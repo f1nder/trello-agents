@@ -217,6 +217,8 @@ const LogStreamModal = () => {
   const [follow, setFollow] = useState(true);
   const [lineCount, setLineCount] = useState(0);
   const logRef = useRef<LazyLog | null>(null);
+  // Queue lines that arrive before the <LazyLog> ref is ready.
+  const pendingLinesRef = useRef<string[]>([]);
   const ignoreScrollRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const [isStopping, setIsStopping] = useState(false);
@@ -225,6 +227,25 @@ const LogStreamModal = () => {
   const pod = trello?.arg<AgentPod>("pod");
   const initialLogText = "";
   const logKey = pod ? `${pod.namespace}-${pod.name}` : "logs";
+
+  const appendLinesSafely = useCallback((lines: string[]) => {
+    if (!lines.length) return;
+    const target = logRef.current;
+    if (target) {
+      target.appendLines(lines);
+      return;
+    }
+    // LazyLog not ready yet; buffer and let the next attempt flush.
+    pendingLinesRef.current.push(...lines);
+  }, []);
+
+  // Flush any buffered lines once the ref becomes ready.
+  useEffect(() => {
+    if (logRef.current && pendingLinesRef.current.length > 0) {
+      logRef.current.appendLines(pendingLinesRef.current);
+      pendingLinesRef.current = [];
+    }
+  });
   const handleScroll = useCallback(
     ({
       scrollTop,
@@ -328,7 +349,7 @@ const LogStreamModal = () => {
           if (nextLines.length === 0) {
             return;
           }
-          logRef.current?.appendLines(
+          appendLinesSafely(
             nextLines.map((line) =>
               line.replace(
                 /^[\t\s]*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\s*/,
