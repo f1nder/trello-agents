@@ -16,6 +16,7 @@ type Props = {
   handleScroll: (args: ScrollArgs) => void;
   logRef: RefObject<LazyLog>;
   logKey: string;
+  visible?: boolean;
 };
 
 const INITIAL_TEXT = "";
@@ -28,9 +29,18 @@ export const LogViewerSection: FC<Props> = ({
   handleScroll,
   logRef,
   logKey,
+  visible = true,
 }) => {
   return (
-    <section className="tab-panel" style={{ padding: 0 }}>
+    <section
+      className="tab-panel"
+      hidden={!visible}
+      aria-hidden={!visible}
+      style={{
+        padding: 0,
+        display: visible ? undefined : "none",
+      }}
+    >
       <div
         style={{
           height: "560px",

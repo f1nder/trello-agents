@@ -260,17 +260,16 @@ const LogStreamModal = () => {
         )}
       </header>
 
-      {tab === "logs" && (
-        <LogViewerSection
-          pod={pod}
-          follow={follow}
-          resumeFollow={resumeFollow}
-          lineCount={lineCount}
-          handleScroll={handleScroll}
-          logRef={logRef}
-          logKey={logKey}
-        />
-      )}
+      <LogViewerSection
+        pod={pod}
+        follow={follow}
+        resumeFollow={resumeFollow}
+        lineCount={lineCount}
+        handleScroll={handleScroll}
+        logRef={logRef}
+        logKey={logKey}
+        visible={tab === "logs"}
+      />
 
       {tab === "info" && <PodInfoPanel pod={pod} settings={settings} />}
 
