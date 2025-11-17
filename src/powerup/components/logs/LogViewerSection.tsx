@@ -13,6 +13,7 @@ type Props = {
   follow: boolean;
   resumeFollow: () => void;
   disableFollow: () => void;
+  status: "idle" | "connecting" | "streaming" | "error";
   lineCount: number;
   handleScroll: (args: ScrollArgs) => void;
   logRef: RefObject<LazyLog>;
@@ -27,6 +28,7 @@ export const LogViewerSection: FC<Props> = ({
   follow,
   resumeFollow,
   disableFollow,
+  status,
   lineCount,
   handleScroll,
   logRef,
@@ -56,24 +58,33 @@ export const LogViewerSection: FC<Props> = ({
             display: "flex",
           }}
         >
-          {lineCount === 0 ? (
-            <pre style={{ margin: 0, opacity: 0.7, padding: "0 0.5rem" }}>
-              {pod?.phase === "Pending"
-                ? "Pod is Pending. Will connect and stream once it starts…"
-                : "No log output yet…"}
-            </pre>
-          ) : (
-            <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-              <button
-                type="button"
-                className="log-follow-toggle"
-                onClick={follow ? disableFollow : resumeFollow}
-                title={
-                  follow ? "Disable log following" : "Resume log following"
-                }
+          <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+            <button
+              type="button"
+              className="log-follow-toggle"
+              onClick={follow ? disableFollow : resumeFollow}
+              title={follow ? "Disable log following" : "Resume log following"}
+            >
+              {follow ? "Following" : "Start following"}
+            </button>
+            {lineCount === 0 ? (
+              <pre
+                style={{
+                  margin: 0,
+                  opacity: 0.7,
+                  padding: "0 0.5rem",
+                  height: "100%",
+                  backgroundColor: "#000000",
+                  color: "var(--ca-text-primary, #f4f5f7)",
+                }}
               >
-                {follow ? "Following" : "Start following"}
-              </button>
+                {status === "connecting" || status === "streaming"
+                  ? "Loading logs…"
+                  : pod?.phase === "Pending"
+                    ? "Pod is Pending. Will connect and stream once it starts…"
+                    : "No log output yet…"}
+              </pre>
+            ) : (
               <LazyLog
                 key={logKey}
                 ref={logRef}
@@ -91,8 +102,8 @@ export const LogViewerSection: FC<Props> = ({
                   backgroundColor: "#000000",
                 }}
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </section>

@@ -32,6 +32,7 @@ export const usePodLogStream = ({
   const pendingLinesRef = useRef<string[]>([]);
   const ignoreScrollRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const allowAutoDisableRef = useRef(false);
 
   const logKey = useMemo(
     () => (pod ? `${pod.namespace}-${pod.name}` : "logs"),
@@ -66,14 +67,15 @@ export const usePodLogStream = ({
       scrollHeight: number;
       clientHeight: number;
     }) => {
-      if (ignoreScrollRef.current) return;
+      if (ignoreScrollRef.current || !allowAutoDisableRef.current) return;
+      if (status !== "streaming") return;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const isNearBottom = distanceFromBottom <= 8;
       if (follow && !isNearBottom) {
         setFollow(false);
       }
     },
-    [follow]
+    [follow, status]
   );
 
   const resumeFollow = useCallback(() => {
@@ -84,12 +86,12 @@ export const usePodLogStream = ({
     }, 150);
   }, []);
 
-  const enableFollow = useCallback(() => {
+  const enableFollow = useCallback((ignoreDuration = 500) => {
     ignoreScrollRef.current = true;
     setFollow(true);
     setTimeout(() => {
       ignoreScrollRef.current = false;
-    }, 150);
+    }, ignoreDuration);
   }, []);
 
   const disableFollow = useCallback(() => {
@@ -101,6 +103,11 @@ export const usePodLogStream = ({
       return;
     }
 
+    allowAutoDisableRef.current = false;
+    const autoDisableTimer = window.setTimeout(() => {
+      allowAutoDisableRef.current = true;
+    }, 750);
+
     const abortController = new AbortController();
     abortRef.current = abortController;
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
@@ -109,7 +116,7 @@ export const usePodLogStream = ({
 
     // reset UI state on pod change
     setLineCount(0);
-    enableFollow();
+    enableFollow(750);
     setError(null);
 
     const canStreamFromPhase = (phase: string | undefined) =>
@@ -200,8 +207,9 @@ export const usePodLogStream = ({
       reader?.cancel().catch(() => undefined);
       stopWatching?.();
       abortRef.current = null;
+      window.clearTimeout(autoDisableTimer);
     };
-  }, [appendLinesSafely, openShiftClient, pod]);
+  }, [appendLinesSafely, enableFollow, openShiftClient, pod]);
 
   const abortStreaming = useCallback(() => {
     abortRef.current?.abort();

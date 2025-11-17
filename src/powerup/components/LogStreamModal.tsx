@@ -276,6 +276,7 @@ const LogStreamModal = () => {
         follow={follow}
         resumeFollow={resumeFollow}
         disableFollow={disableFollow}
+        status={logStatus}
         lineCount={lineCount}
         handleScroll={handleScroll}
         logRef={logRef}
