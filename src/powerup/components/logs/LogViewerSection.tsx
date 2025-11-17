@@ -12,6 +12,7 @@ type Props = {
   pod: AgentPod | null | undefined;
   follow: boolean;
   resumeFollow: () => void;
+  disableFollow: () => void;
   lineCount: number;
   handleScroll: (args: ScrollArgs) => void;
   logRef: RefObject<LazyLog>;
@@ -25,6 +26,7 @@ export const LogViewerSection: FC<Props> = ({
   pod,
   follow,
   resumeFollow,
+  disableFollow,
   lineCount,
   handleScroll,
   logRef,
@@ -54,16 +56,6 @@ export const LogViewerSection: FC<Props> = ({
             display: "flex",
           }}
         >
-          {!follow && (
-            <button
-              type="button"
-              className="log-resume-overflow"
-              onClick={resumeFollow}
-              title="Resume log following"
-            >
-              Resume
-            </button>
-          )}
           {lineCount === 0 ? (
             <pre style={{ margin: 0, opacity: 0.7, padding: "0 0.5rem" }}>
               {pod?.phase === "Pending"
@@ -71,7 +63,17 @@ export const LogViewerSection: FC<Props> = ({
                 : "No log output yet…"}
             </pre>
           ) : (
-            <div style={{ flex: 1, minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+              <button
+                type="button"
+                className="log-follow-toggle"
+                onClick={follow ? disableFollow : resumeFollow}
+                title={
+                  follow ? "Disable log following" : "Resume log following"
+                }
+              >
+                {follow ? "Following" : "Start following"}
+              </button>
               <LazyLog
                 key={logKey}
                 ref={logRef}

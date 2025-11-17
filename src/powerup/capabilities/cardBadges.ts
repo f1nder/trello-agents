@@ -23,12 +23,7 @@ const buildRunningBadge = async (
   } catch (error) {
     logger.warn("cardBadges: snapshot fetch failed", error);
     return {
-      text: "Agents offline",
-      color: "red",
-      title: "Unable to reach OpenShift pods API",
       refresh,
-      monochrome: false,
-      icon: resolveAssetUrl("/icons/card-agents-gray.svg"),
     };
   }
 

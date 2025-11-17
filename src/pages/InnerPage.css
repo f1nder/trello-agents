@@ -738,15 +738,14 @@
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
 }
 
-/* Resume button positioned in top right corner as overflow */
-.log-resume-overflow {
+/* Follow toggle button positioned in top right corner inside log container */
+.log-follow-toggle {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  z-index: 10;
+  top: 3.75rem;
+  right: 1.75rem;
   appearance: none;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(2, 6, 23, 0.85);
+  background: rgba(35, 35, 35, 0.85);
   backdrop-filter: blur(8px);
   color: var(--ca-log-text);
   padding: 0.4rem 0.8rem;
@@ -757,10 +756,11 @@
   transition: background 150ms ease, border-color 150ms ease,
     transform 120ms ease, box-shadow 150ms ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 1;
 }
 
-.log-resume-overflow:hover,
-.log-resume-overflow:focus-visible {
+.log-follow-toggle:hover,
+.log-follow-toggle:focus-visible {
   background: rgba(2, 6, 23, 0.95);
   border-color: rgba(148, 163, 184, 0.6);
   transform: translateY(-1px);

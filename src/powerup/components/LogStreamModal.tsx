@@ -10,7 +10,10 @@ import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
 import "../../styles/index.css";
 import "../../pages/InnerPage.css";
 import { getDisplayableError } from "../utils/errors";
-import { StatusIndicator, LogConnectionIndicator } from "./logs/StatusIndicators";
+import {
+  StatusIndicator,
+  LogConnectionIndicator,
+} from "./logs/StatusIndicators";
 import { usePodLogStream } from "../hooks/usePodLogStream";
 import { LogViewerSection } from "./logs/LogViewerSection";
 import { PodInfoPanel } from "./logs/PodInfoPanel";
@@ -118,6 +121,7 @@ const LogStreamModal = () => {
     follow,
     handleScroll,
     resumeFollow,
+    disableFollow,
     logRef,
     logKey,
     abortStreaming,
@@ -202,7 +206,9 @@ const LogStreamModal = () => {
                   }`}
                   onClick={() => setTab(id)}
                 >
-                  {id === "logs" && <LogConnectionIndicator status={logStatus} />}
+                  {id === "logs" && (
+                    <LogConnectionIndicator status={logStatus} />
+                  )}
                   {icon}
                   <span>{label}</span>
                 </button>
@@ -215,7 +221,12 @@ const LogStreamModal = () => {
               type="button"
               className="segmented__button segmented__button--danger"
               onClick={stopPod}
-              disabled={isStopping || !openShiftClient}
+              disabled={
+                isStopping ||
+                !openShiftClient ||
+                !pod ||
+                (pod.phase !== "Pending" && pod.phase !== "Running")
+              }
               aria-label={isStopping ? "Stopping pod" : "Stop pod"}
               title="Stop pod"
             >
@@ -264,6 +275,7 @@ const LogStreamModal = () => {
         pod={pod}
         follow={follow}
         resumeFollow={resumeFollow}
+        disableFollow={disableFollow}
         lineCount={lineCount}
         handleScroll={handleScroll}
         logRef={logRef}

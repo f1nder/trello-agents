@@ -84,6 +84,18 @@ export const usePodLogStream = ({
     }, 150);
   }, []);
 
+  const enableFollow = useCallback(() => {
+    ignoreScrollRef.current = true;
+    setFollow(true);
+    setTimeout(() => {
+      ignoreScrollRef.current = false;
+    }, 150);
+  }, []);
+
+  const disableFollow = useCallback(() => {
+    setFollow(false);
+  }, []);
+
   useEffect(() => {
     if (!pod || !openShiftClient) {
       return;
@@ -97,7 +109,7 @@ export const usePodLogStream = ({
 
     // reset UI state on pod change
     setLineCount(0);
-    setFollow(true);
+    enableFollow();
     setError(null);
 
     const canStreamFromPhase = (phase: string | undefined) =>
@@ -202,6 +214,8 @@ export const usePodLogStream = ({
     follow,
     handleScroll,
     resumeFollow,
+    enableFollow,
+    disableFollow,
     logRef: logRef as RefObject<LazyLog>,
     logKey,
     abortStreaming,

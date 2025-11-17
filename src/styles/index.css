@@ -38,7 +38,7 @@
   --ca-error-text: #dc2626;
   --ca-log-bg: #0f172a;
   --ca-log-text: #e2e8f0;
-  --ca-button-bg: #2563eb;
+  --ca-button-bg: #4e4e4e;
   --ca-button-color: #ffffff;
   --ca-button-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
   --ca-input-border: #cbd5f5;
@@ -95,7 +95,7 @@
   --ca-error-text: #f87171;
   --ca-log-bg: #050a16;
   --ca-log-text: #f8fafc;
-  --ca-button-bg: #3b82f6;
+  --ca-button-bg: #3a3a3a;
   --ca-button-shadow: 0 15px 35px rgba(15, 23, 42, 0.65);
   --ca-input-border: rgba(148, 163, 184, 0.5);
   --ca-preview-hero-bg: rgba(148, 163, 184, 0.08);
