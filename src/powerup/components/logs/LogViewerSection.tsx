@@ -1,5 +1,5 @@
 import type { CSSProperties, FC, RefObject } from "react";
-import { LazyLog } from "@melloware/react-logviewer";
+import { LazyLog, Line } from "@melloware/react-logviewer";
 import type { AgentPod } from "../../types/pods";
 
 type ScrollArgs = {
@@ -39,20 +39,10 @@ export const LogViewerSection: FC<Props> = ({
         }}
       >
         <div
-          style={
-            {
-              color: "var(--ca-log-text)",
-              borderRadius: "0.75rem",
-              padding: "0.5rem 0.75rem 0.75rem",
-              fontFamily:
-                '"JetBrains Mono", "SFMono-Regular", Menlo, monospace',
-              position: "relative",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              "--ca-log-bg": "#1233dd",
-            } as CSSProperties
-          }
+          style={{
+            height: "100%",
+            display: "flex",
+          }}
         >
           {!follow && (
             <button
@@ -84,10 +74,9 @@ export const LogViewerSection: FC<Props> = ({
                 selectableLines
                 external
                 extraLines={1}
-                style={{ backgroundColor: "lightgray" }}
+                style={{ backgroundColor: "#000000" }}
                 containerStyle={{
-                  backgroundColor: "lightgray",
-                  padding: "0.5rem 0.75rem 0.75rem",
+                  backgroundColor: "#000000",
                 }}
               />
             </div>

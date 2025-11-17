@@ -767,3 +767,14 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
 }
+
+/* Log viewer overrides */
+.lazyLog {
+  background-color: #000000;
+  color: #d6d6d6;
+}
+
+.searchMatch {
+  background-color: #000000;
+  color: #ffff00;
+}

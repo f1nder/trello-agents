@@ -222,3 +222,36 @@ input[type="password"] {
   border-radius: 999px;
   animation: pod-spin 0.75s linear infinite;
 }
+
+.react-lazylog-searchbar {
+  background-color: #161616 !important;
+  color: #f8fafc;
+  border-top-left-radius: 0.5rem !important;
+  border-top-right-radius: 0.5rem !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.react-lazylog-searchbar input {
+  background-color: #050a16 !important;
+  color: #f8fafc !important;
+  border: 1px solid #222222 !important;
+}
+
+.react-lazylog-searchbar-matches {
+  font-size: 0.6rem !important;
+}
+
+.react-lazylog-searchbar input {
+  background-color: #202020 !important;
+  color: #f8fafc;
+}
+
+.react-lazylog {
+  padding: 0.5rem !important;
+  background-color: #191919 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+}
