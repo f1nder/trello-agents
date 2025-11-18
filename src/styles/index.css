@@ -100,7 +100,7 @@
   --ca-input-border: rgba(148, 163, 184, 0.5);
   --ca-preview-hero-bg: rgba(148, 163, 184, 0.08);
   --ca-preview-hero-border: rgba(148, 163, 184, 0.35);
-  --ca-theme-switcher-bg: rgba(15, 23, 42, 0.6);
+  --ca-theme-switcher-bg: #202020;
   --ca-theme-switcher-border: rgba(148, 163, 184, 0.4);
   --ca-theme-switcher-active: var(--ca-button-bg);
   --ca-theme-switcher-text: rgba(248, 250, 252, 0.9);
@@ -254,4 +254,12 @@ input[type="password"] {
   border-top-right-radius: 0 !important;
   border-bottom-left-radius: 0.5rem !important;
   border-bottom-right-radius: 0.5rem !important;
+}
+
+.stop-pod-button {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #dc2626 !important;
+  box-shadow: 0 3px 5px rgba(220, 38, 38, 0.3) !important;
+  margin-right: 0.5rem !important;
 }

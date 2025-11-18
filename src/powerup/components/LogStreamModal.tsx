@@ -219,7 +219,7 @@ const LogStreamModal = () => {
             </span>
             <button
               type="button"
-              className="segmented__button segmented__button--danger"
+              className="segmented__button segmented__button--danger stop-pod-button"
               onClick={stopPod}
               disabled={
                 isStopping ||
