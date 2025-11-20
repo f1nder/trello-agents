@@ -17,6 +17,7 @@ import { trackEvent } from "../utils/analytics";
 import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
 import { isIgnorableNetworkError } from "../utils/errors";
+import logger from "../utils/logger";
 
 type StatusKind = "running" | "pending" | "complete" | "error";
 
@@ -39,6 +40,23 @@ const statusFamilies: Record<StatusKind, string[]> = {
     "crashloopbackoff",
     "evicted",
   ],
+};
+
+const MIN_SECTION_HEIGHT = 100;
+const POD_ROW_HEIGHT = 74;
+const HEADER_ALLOWANCE = 110;
+const MAX_VISIBLE_PODS = 10;
+
+const clampRows = (pods: number): number => {
+  if (!Number.isFinite(pods) || pods <= 0) {
+    return 1;
+  }
+  return Math.min(Math.max(Math.floor(pods), 1), MAX_VISIBLE_PODS);
+};
+
+const estimateSectionHeight = (rows: number): number => {
+  const estimated = HEADER_ALLOWANCE + rows * POD_ROW_HEIGHT;
+  return Math.max(MIN_SECTION_HEIGHT, Math.round(estimated));
 };
 
 const inferStatusKind = (phase: string): StatusKind => {
@@ -172,6 +190,16 @@ const CardBackShell = () => {
       }),
     [livePods.pods]
   );
+
+  // Dynamically resize the iframe based on pod count
+  useEffect(() => {
+    if (!trello) return;
+    const rows = clampRows(sortedPods.length);
+    const height = estimateSectionHeight(rows);
+    trello.sizeTo(height).catch((error) => {
+      logger.error("Failed to resize iframe", error);
+    });
+  }, [trello, sortedPods.length]);
 
   const isAwaitingInitialPods =
     sortedPods.length === 0 &&

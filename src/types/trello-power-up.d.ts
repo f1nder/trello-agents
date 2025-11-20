@@ -24,12 +24,13 @@ declare namespace TrelloPowerUp {
     loadSecret(key: string): Promise<string | null>;
     arg<T = unknown>(key: string): T | undefined;
     navigate(options: { url: string }): Promise<void>;
+    sizeTo(height: number): Promise<void>;
   }
 
   type CapabilityHandler<T extends unknown[] = unknown[], R = unknown> = (...args: T) => R;
 
   interface CapabilityMap {
-    'card-back-section': CapabilityHandler<[Client], Promise<CardBackSectionResponse> | CardBackSectionResponse>;
+    'card-back-section': CapabilityHandler<[Client], Promise<CardBackSectionResponse | null> | CardBackSectionResponse | null>;
     'card-buttons': CapabilityHandler<[Client], CardButton[]>;
     'card-detail-badges': CapabilityHandler<[Client], Promise<CardDetailBadge[]> | CardDetailBadge[]>;
     'card-badges': CapabilityHandler<[Client], Promise<CardBadge[]> | CardBadge[]>;

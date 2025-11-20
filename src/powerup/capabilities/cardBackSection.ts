@@ -6,7 +6,7 @@ import { ensureRunningWatcher } from "../services/podRuntime";
 const MIN_SECTION_HEIGHT = 100;
 const POD_ROW_HEIGHT = 74;
 const HEADER_ALLOWANCE = 110;
-const MAX_VISIBLE_PODS = 5;
+const MAX_VISIBLE_PODS = 10;
 
 const clampRows = (pods: number | null): number => {
   if (!Number.isFinite(pods ?? NaN) || (pods ?? 0) <= 0) {
@@ -20,40 +20,41 @@ const estimateSectionHeight = (rows: number): number => {
   return Math.max(MIN_SECTION_HEIGHT, Math.round(estimated));
 };
 
-const resolveDynamicHeight = async (
-  t: TrelloPowerUp.Client
-): Promise<number> => {
+
+export const cardBackSection: TrelloPowerUp.CapabilityHandler<
+  [TrelloPowerUp.Client],
+  Promise<TrelloPowerUp.CardBackSectionResponse | null>
+> = async (t) => {
   try {
     const watcher = await ensureRunningWatcher(t);
     if (!watcher) {
-      return MIN_SECTION_HEIGHT;
+      return null;
     }
     try {
       await watcher.ready;
     } catch {
       // ignore bootstrap errors; watcher.status will describe issues elsewhere
     }
+    if (!watcher.total || watcher.total <= 0) {
+      return null;
+    }
     const rows = clampRows(watcher.total);
-    return estimateSectionHeight(rows);
+    const height = estimateSectionHeight(rows);
+    return {
+      title: "Agents",
+      // Trello requires a monochrome gray icon for card-back sections.
+      icon: resolveAssetUrl(CARD_BACK_ICON_PATH),
+      content: {
+        type: "iframe",
+        url: t.signUrl(resolveAssetUrl(CARD_BACK_IFRAME)),
+        height,
+      },
+    };
   } catch (error) {
-    logger.debug("cardBackSection: falling back to default height", error);
-    return MIN_SECTION_HEIGHT;
+    logger.debug("cardBackSection: falling back to null", error);
+    return null;
   }
 };
-
-export const cardBackSection: TrelloPowerUp.CapabilityHandler<
-  [TrelloPowerUp.Client],
-  Promise<TrelloPowerUp.CardBackSectionResponse>
-> = async (t) => ({
-  title: "Agents",
-  // Trello requires a monochrome gray icon for card-back sections.
-  icon: resolveAssetUrl(CARD_BACK_ICON_PATH),
-  content: {
-    type: "iframe",
-    url: t.signUrl(resolveAssetUrl(CARD_BACK_IFRAME)),
-    height: await resolveDynamicHeight(t),
-  },
-});
 
 // Log resolved assets once on module load (helps debug missing icon issues)
 (() => {
