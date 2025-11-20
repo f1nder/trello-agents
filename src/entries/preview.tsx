@@ -151,6 +151,9 @@ const previewClient: TrelloPowerUp.Client = {
     } as unknown as T;
   },
   signUrl: (url) => url,
+  sizeTo: async () => {
+    // no-op in preview harness
+  },
   modal: ({ args }) =>
     new Promise<void>((resolve) => {
       const config = getPreviewConfig();

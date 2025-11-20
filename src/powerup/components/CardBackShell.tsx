@@ -17,6 +17,8 @@ import { trackEvent } from "../utils/analytics";
 import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 import ConnectionStatusIndicator from "./ConnectionStatusIndicator";
 import { isIgnorableNetworkError } from "../utils/errors";
+import { estimateCardBackHeight } from "../utils/cardBackSizing";
+import logger from "../utils/logger";
 
 type StatusKind = "running" | "pending" | "complete" | "error";
 
@@ -185,6 +187,7 @@ const CardBackShell = () => {
   // Track which pods have been seen to animate only truly new insertions.
   const seenPodIdsRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
+  const lastSizedHeight = useRef<number | null>(null);
   useEffect(() => {
     // After each render, record all current IDs as seen.
     for (const p of sortedPods) {
@@ -194,6 +197,23 @@ const CardBackShell = () => {
       initializedRef.current = true;
     }
   }, [sortedPods]);
+
+  const visiblePodCount = sortedPods.length;
+  useEffect(() => {
+    if (!trello || typeof trello.sizeTo !== "function") {
+      return;
+    }
+    const desiredHeight = estimateCardBackHeight(visiblePodCount);
+    if (lastSizedHeight.current === desiredHeight) {
+      return;
+    }
+    lastSizedHeight.current = desiredHeight;
+    trello
+      .sizeTo(desiredHeight)
+      .catch((error) =>
+        logger.warn("CardBackShell: failed to resize iframe", error)
+      );
+  }, [trello, visiblePodCount]);
 
   const markPending = (podId: string, nextState: boolean) => {
     setPendingStopIds((prev) => {

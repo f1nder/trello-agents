@@ -5,6 +5,9 @@ declare namespace TrelloPowerUp {
     board<T = Record<string, unknown>>(...props: string[]): Promise<T>;
     member<T = Record<string, unknown>>(): Promise<T>;
     signUrl(url: string): string;
+    sizeTo(
+      target: number | HTMLElement | { height?: number; width?: number }
+    ): Promise<void>;
     modal(options: {
       url: string;
       accentColor?: string;
@@ -29,7 +32,10 @@ declare namespace TrelloPowerUp {
   type CapabilityHandler<T extends unknown[] = unknown[], R = unknown> = (...args: T) => R;
 
   interface CapabilityMap {
-    'card-back-section': CapabilityHandler<[Client], Promise<CardBackSectionResponse> | CardBackSectionResponse>;
+    'card-back-section': CapabilityHandler<
+      [Client],
+      Promise<CardBackSectionResponse | null> | CardBackSectionResponse | null
+    >;
     'card-buttons': CapabilityHandler<[Client], CardButton[]>;
     'card-detail-badges': CapabilityHandler<[Client], Promise<CardDetailBadge[]> | CardDetailBadge[]>;
     'card-badges': CapabilityHandler<[Client], Promise<CardBadge[]> | CardBadge[]>;

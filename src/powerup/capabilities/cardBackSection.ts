@@ -2,58 +2,60 @@ import { CARD_BACK_IFRAME, CARD_BACK_ICON_PATH } from "../config/constants";
 import { resolveAssetUrl } from "../utils/url";
 import logger from "../utils/logger";
 import { ensureRunningWatcher } from "../services/podRuntime";
-
-const MIN_SECTION_HEIGHT = 100;
-const POD_ROW_HEIGHT = 74;
-const HEADER_ALLOWANCE = 110;
-const MAX_VISIBLE_PODS = 5;
-
-const clampRows = (pods: number | null): number => {
-  if (!Number.isFinite(pods ?? NaN) || (pods ?? 0) <= 0) {
-    return 1;
-  }
-  return Math.min(Math.max(Math.floor(pods ?? 1), 1), MAX_VISIBLE_PODS);
-};
-
-const estimateSectionHeight = (rows: number): number => {
-  const estimated = HEADER_ALLOWANCE + rows * POD_ROW_HEIGHT;
-  return Math.max(MIN_SECTION_HEIGHT, Math.round(estimated));
-};
+import {
+  estimateCardBackHeight,
+  hasDisplayablePods,
+} from "../utils/cardBackSizing";
 
 const resolveDynamicHeight = async (
   t: TrelloPowerUp.Client
-): Promise<number> => {
+): Promise<number | null> => {
   try {
     const watcher = await ensureRunningWatcher(t);
     if (!watcher) {
-      return MIN_SECTION_HEIGHT;
+      logger.debug("cardBackSection: watcher not available");
+      return null;
     }
     try {
       await watcher.ready;
-    } catch {
-      // ignore bootstrap errors; watcher.status will describe issues elsewhere
+    } catch (bootstrapError) {
+      logger.debug("cardBackSection: watcher bootstrap failed", bootstrapError);
     }
-    const rows = clampRows(watcher.total);
-    return estimateSectionHeight(rows);
+
+    if (!hasDisplayablePods(watcher.total)) {
+      logger.info("cardBackSection: no pods for card, hiding section", {
+        cardId: watcher.cardId,
+      });
+      return null;
+    }
+
+    return estimateCardBackHeight(watcher.total);
   } catch (error) {
-    logger.debug("cardBackSection: falling back to default height", error);
-    return MIN_SECTION_HEIGHT;
+    logger.debug("cardBackSection: failed to resolve dynamic height", error);
+    return null;
   }
 };
 
 export const cardBackSection: TrelloPowerUp.CapabilityHandler<
   [TrelloPowerUp.Client],
-  Promise<TrelloPowerUp.CardBackSectionResponse>
-> = async (t) => ({
-  title: "Agents",
-  // Trello requires a monochrome gray icon for card-back sections.
-  icon: resolveAssetUrl(CARD_BACK_ICON_PATH),
-  content: {
-    type: "iframe",
-    url: t.signUrl(resolveAssetUrl(CARD_BACK_IFRAME)),
-    height: await resolveDynamicHeight(t),
-  },
-});
+  Promise<TrelloPowerUp.CardBackSectionResponse | null>
+> = async (t) => {
+  const height = await resolveDynamicHeight(t);
+  if (height === null) {
+    return null;
+  }
+
+  return {
+    title: "Agents",
+    // Trello requires a monochrome gray icon for card-back sections.
+    icon: resolveAssetUrl(CARD_BACK_ICON_PATH),
+    content: {
+      type: "iframe",
+      url: t.signUrl(resolveAssetUrl(CARD_BACK_IFRAME)),
+      height,
+    },
+  };
+};
 
 // Log resolved assets once on module load (helps debug missing icon issues)
 (() => {
