@@ -3,7 +3,7 @@ import { DEFAULT_CLUSTER_SETTINGS, type ClusterSettings } from '../powerup/types
 import { useAppliedTrelloTheme } from '../powerup/hooks/useAppliedTrelloTheme';
 import { usePowerUpClient } from '../powerup/hooks/usePowerUpClient';
 import { STORAGE_KEYS } from '../powerup/config/constants';
-import { OpenShiftClient, OpenShiftRequestError } from '../powerup/services/openshiftClient';
+import { KubernetesClient, KubernetesRequestError } from '../powerup/services/kubernetesClient';
 import '../styles/index.css';
 import '../pages/InnerPage.css';
 import { trackEvent } from '../powerup/utils/analytics';
@@ -76,7 +76,7 @@ const BoardSettingsPage = () => {
     }
     setTestStatus('testing');
     try {
-      const client = new OpenShiftClient({
+      const client = new KubernetesClient({
         baseUrl: trimmedUrl,
         namespace: trimmedNamespace,
         token,
@@ -88,7 +88,7 @@ const BoardSettingsPage = () => {
       trackEvent(trello, 'settings-test-connection', { result: 'success' });
     } catch (error) {
       let message = 'Unable to reach the cluster. Double-check credentials.';
-      if (error instanceof OpenShiftRequestError) {
+      if (error instanceof KubernetesRequestError) {
         message = error.message;
       } else if (error instanceof Error) {
         message = error.message;
@@ -108,7 +108,7 @@ const BoardSettingsPage = () => {
       <header>
         <p className="eyebrow">Board-level settings</p>
         <h1>Cluster connection</h1>
-        <p className="lede">Configure OpenShift endpoint, namespace, and Trello-facing aliases.</p>
+        <p className="lede">Configure Kubernetes endpoint, namespace, and Trello-facing aliases.</p>
       </header>
       <form className="settings-form" onSubmit={handleSubmit}>
         <label>
@@ -118,6 +118,15 @@ const BoardSettingsPage = () => {
         <label>
           <span>Namespace</span>
           <input type="text" value={formState.namespace} onChange={handleChange('namespace')} required />
+        </label>
+        <label>
+          <span>Dashboard URL (optional)</span>
+          <input
+            type="url"
+            value={formState.consoleUrl ?? ''}
+            onChange={handleChange('consoleUrl')}
+            placeholder="https://dashboard.example.com"
+          />
         </label>
         <label>
           <span>Service-account token</span>

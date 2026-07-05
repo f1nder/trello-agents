@@ -1,7 +1,7 @@
 # Trello Agents Power-Up UI
 
-React + TypeScript Power-Up that renders a live OpenShift pod roster directly on Trello cards. The current milestone wires
-the real Trello iframe surfaces, board-level configuration, OpenShift watch/log clients, and optimistic pod controls.
+React + TypeScript Power-Up that renders a live Kubernetes pod roster directly on Trello cards. The current milestone wires
+the real Trello iframe surfaces, board-level configuration, Kubernetes watch/log clients, and optimistic pod controls.
 
 ## Getting Started
 
@@ -16,8 +16,8 @@ Trello:
 - `/powerup.html` – capability bootstrap (registered through `public/manifest.json`).
 - `/card-back.html` – card-back section iframe with live pod roster + actions.
 - `/settings.html` – native Power-Up board settings iframe (opened from Trello’s admin drawer).
-- `/logs.html` – Trello modal that streams pod logs via the OpenShift follow API.
-- `/preview.html` – standalone preview harness that mocks Trello/OpenShift so you can debug CardBack + Log modal flows without embedding in Trello.
+- `/logs.html` – Trello modal that streams pod logs via the Kubernetes follow API.
+- `/preview.html` – standalone preview harness that mocks Trello/Kubernetes so you can debug CardBack + Log modal flows without embedding in Trello.
 
 ## Scripts
 
@@ -33,20 +33,20 @@ Trello:
 3. Paste the service-account token; Trello secrets persist it and only the generated secret ID is stored.
 4. Toggle **Ignore SSL** only for trusted staging clusters—prefer supplying a CA bundle instead.
 
-Roster iframes use the saved settings to instantiate an `OpenShiftClient`, bootstrap with a pod list, and then rely solely
+Roster iframes use the saved settings to instantiate an `KubernetesClient`, bootstrap with a pod list, and then rely solely
 on `watch=true` streams. Stop/log actions reuse the same client so credentials never leave Trello.
 
 ## Architecture Highlights
 
 - **Hooks:** `usePowerUpClient`, `useClusterSettings`, `useCardMetadata`, and `useLivePods` isolate Trello/bootstrap logic
   from UI code so new surfaces (badges, buttons) can reuse the same data pipeline.
-- **OpenShift client:** Fetch-based implementation handles bootstrap lists, watch streams with exponential backoff,
-  stop/delete flows (including DeploymentConfig owners), and log streaming readers.
-- **Optimistic UX:** Stopping a pod immediately fades the row out while the OpenShift request runs; failures restore the
+- **Kubernetes client:** Fetch-based implementation handles bootstrap lists, watch streams with exponential backoff,
+  stop/delete flows (resolving the owning Job before deleting the Job and its pod), and log streaming readers.
+- **Optimistic UX:** Stopping a pod immediately fades the row out while the Kubernetes request runs; failures restore the
   previous snapshot and surface Trello alerts.
 - **Log streaming:** Modals receive the selected pod via `t.modal({ args })` and stream chunks into a scrolling terminal
   with automatic cleanup on close/unmount.
-- **Preview harness:** `preview.html` spins up a mock Trello client + OpenShift watch/log service so the exact Trello
+- **Preview harness:** `preview.html` spins up a mock Trello client + Kubernetes watch/log service so the exact Trello
   components can be tested locally with dummy pods, optimistic stop flows, and the log viewer modal.
 
 ## Deployment Notes

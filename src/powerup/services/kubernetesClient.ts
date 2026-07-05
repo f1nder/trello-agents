@@ -1,7 +1,7 @@
 import type { AgentPod, PodOwnerReference, PodPhase } from "../types/pods";
 import logger from "../utils/logger";
 
-export interface OpenShiftClientConfig {
+export interface KubernetesClientConfig {
   baseUrl: string;
   namespace: string;
   token?: string | null;
@@ -65,7 +65,7 @@ export interface StreamLogsOptions {
   limitBytes?: number;
 }
 
-export interface OpenShiftPodApi {
+export interface KubernetesPodApi {
   listPods(params?: ListPodsParams): Promise<AgentPod[]>;
   watchPods(handler: PodWatchHandler, options?: WatchPodsOptions): () => void;
   stopPod(podName: string, options?: StopPodOptions): Promise<void>;
@@ -197,45 +197,45 @@ const normalizeBaseUrl = (value: string) => {
   return value;
 };
 
-export class OpenShiftRequestError extends Error {
+export class KubernetesRequestError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly payload?: string
   ) {
     super(message);
-    this.name = "OpenShiftRequestError";
+    this.name = "KubernetesRequestError";
   }
 }
 
 /**
- * Minimal fetch-based OpenShift API client targeting the subset of
+ * Minimal fetch-based Kubernetes API client targeting the subset of
  * endpoints required by the Card Agents roster.
  */
-export class OpenShiftClient implements OpenShiftPodApi {
+export class KubernetesClient implements KubernetesPodApi {
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
 
   constructor(
-    private readonly config: OpenShiftClientConfig,
+    private readonly config: KubernetesClientConfig,
     deps?: { fetchImpl?: typeof fetch }
   ) {
     this.fetchImpl =
       deps?.fetchImpl ?? (globalThis.fetch?.bind(globalThis) as typeof fetch);
     if (!this.fetchImpl) {
-      throw new Error("OpenShiftClient requires global fetch support");
+      throw new Error("KubernetesClient requires global fetch support");
     }
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
   }
 
   async listPods(params: ListPodsParams = {}): Promise<AgentPod[]> {
     const url = this.buildPodUrl({ ...params, watch: false });
-    logger.debug("[openshift] listPods", { url });
+    logger.debug("[kubernetes] listPods", { url });
     const response = await this.request(url, { method: "GET" });
     const payload =
       (await response.json()) as KubernetesListResponse<KubernetesPod>;
     const result = (payload.items ?? []).map(mapPodResource);
-    logger.debug("[openshift] listPods result", { count: result.length });
+    logger.debug("[kubernetes] listPods result", { count: result.length });
     return result;
   }
 
@@ -311,7 +311,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
     try {
       jobName = await this.resolvePodJobName(namespace, podName, options.owner);
     } catch (error) {
-      logger.warn("[openshift] Unable to resolve job for pod", {
+      logger.warn("[kubernetes] Unable to resolve job for pod", {
         namespace,
         podName,
         message: (error as Error).message,
@@ -327,7 +327,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
       await this.request(jobPath, { method: "DELETE" });
     } catch (error) {
       if (
-        !(error instanceof OpenShiftRequestError) ||
+        !(error instanceof KubernetesRequestError) ||
         (error.status !== 404 && error.status !== 410)
       ) {
         throw error;
@@ -340,7 +340,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
     try {
       await this.request(podPath, { method: "DELETE" });
     } catch (error) {
-      if (!(error instanceof OpenShiftRequestError) || error.status !== 404) {
+      if (!(error instanceof KubernetesRequestError) || error.status !== 404) {
         throw error;
       }
     }
@@ -368,7 +368,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
       return pod.metadata.labels?.["job-name"] ?? pod.metadata.labels?.jobName;
     } catch (error) {
       if (
-        error instanceof OpenShiftRequestError &&
+        error instanceof KubernetesRequestError &&
         (error.status === 404 || error.status === 410)
       ) {
         return undefined;
@@ -419,7 +419,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
     options: WatchPodsOptions
   ): Promise<void> {
     const url = this.buildPodUrl({ ...options, watch: true });
-    logger.debug("[openshift] watchPods connect", { url });
+    logger.debug("[kubernetes] watchPods connect", { url });
     const response = await this.request(url, { method: "GET", signal });
     if (!response.body) {
       throw new Error("Streaming not supported by fetch implementation");
@@ -457,7 +457,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
           pod: mapPodResource(payload.object),
         });
       } catch (error) {
-        logger.warn("[openshift] Unable to parse watch payload", error);
+        logger.warn("[kubernetes] Unable to parse watch payload", error);
       }
     }
     return remainder;
@@ -495,7 +495,7 @@ export class OpenShiftClient implements OpenShiftPodApi {
   ): Promise<Response> {
     const headers = this.mergeHeaders(init.headers);
     const url = this.resolveRequestUrl(path);
-    logger.debug("[openshift] request", { url, method: init.method ?? "GET" });
+    logger.debug("[kubernetes] request", { url, method: init.method ?? "GET" });
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
@@ -507,10 +507,10 @@ export class OpenShiftClient implements OpenShiftPodApi {
     } catch (err) {
       // Browsers throw TypeError on CORS/preflight/network failures before any response.
       if (err instanceof TypeError) {
-        logger.warn("[openshift] network/CORS failure", {
+        logger.warn("[kubernetes] network/CORS failure", {
           message: err.message,
         });
-        throw new OpenShiftRequestError(
+        throw new KubernetesRequestError(
           "Network or CORS/preflight failure (browser blocked request)",
           0,
           err.message
@@ -537,20 +537,20 @@ export class OpenShiftClient implements OpenShiftPodApi {
 
   private async toRequestError(
     response: Response
-  ): Promise<OpenShiftRequestError> {
+  ): Promise<KubernetesRequestError> {
     let payload: string | undefined;
     try {
       payload = await response.text();
     } catch {
       payload = undefined;
     }
-    const message = `OpenShift request failed: ${response.status} ${response.statusText}`;
-    logger.warn("[openshift] request failed", {
+    const message = `Kubernetes request failed: ${response.status} ${response.statusText}`;
+    logger.warn("[kubernetes] request failed", {
       status: response.status,
       statusText: response.statusText,
       payload,
     });
-    return new OpenShiftRequestError(message, response.status, payload);
+    return new KubernetesRequestError(message, response.status, payload);
   }
 }
 

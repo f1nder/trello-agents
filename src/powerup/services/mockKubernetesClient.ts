@@ -1,13 +1,13 @@
 import type { AgentPod } from '../types/pods';
 import type {
-  OpenShiftPodApi,
+  KubernetesPodApi,
   ListPodsParams,
   PodWatchHandler,
   PodWatchEvent,
   StopPodOptions,
   StreamLogsOptions,
   WatchPodsOptions,
-} from './openshiftClient';
+} from './kubernetesClient';
 
 const textEncoder = new TextEncoder();
 const nowIso = () => new Date().toISOString();
@@ -169,7 +169,7 @@ interface WatchRegistration {
   cardId?: string;
 }
 
-export class MockOpenShiftClient implements OpenShiftPodApi {
+export class MockKubernetesClient implements KubernetesPodApi {
   private pods: AgentPod[];
   private watchers = new Set<WatchRegistration>();
   private jitterTimer: ReturnType<typeof setInterval> | null = null;

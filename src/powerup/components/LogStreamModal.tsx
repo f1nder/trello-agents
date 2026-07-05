@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { usePowerUpClient } from "../hooks/usePowerUpClient";
 import { useClusterSettings } from "../hooks/useClusterSettings";
-import { OpenShiftClient } from "../services/openshiftClient";
-import type { OpenShiftPodApi } from "../services/openshiftClient";
+import { KubernetesClient } from "../services/kubernetesClient";
+import type { KubernetesPodApi } from "../services/kubernetesClient";
 import type { AgentPod } from "../types/pods";
 import { confirmPodDeletion } from "../utils/confirmPodDeletion";
 import { getPreviewConfig } from "../utils/preview";
@@ -98,14 +98,14 @@ const LogStreamModal = () => {
   const pod = trello?.arg<AgentPod>("pod");
   const previewConfig = getPreviewConfig();
 
-  const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
-    if (previewConfig?.openShiftClient) {
-      return previewConfig.openShiftClient;
+  const kubernetesClient: KubernetesPodApi | null = useMemo(() => {
+    if (previewConfig?.kubernetesClient) {
+      return previewConfig.kubernetesClient;
     }
     if (!token || !settings.clusterUrl) {
       return null;
     }
-    return new OpenShiftClient({
+    return new KubernetesClient({
       baseUrl: settings.clusterUrl,
       namespace: settings.namespace,
       token,
@@ -125,12 +125,12 @@ const LogStreamModal = () => {
     logRef,
     logKey,
     abortStreaming,
-  } = usePodLogStream({ pod, openShiftClient });
+  } = usePodLogStream({ pod, kubernetesClient });
 
   const displayableError = getDisplayableError(error);
 
   const stopPod = async () => {
-    if (!pod || !openShiftClient || isStopping) return;
+    if (!pod || !kubernetesClient || isStopping) return;
     const confirmed = await confirmPodDeletion(pod, trello);
     if (!confirmed) {
       return;
@@ -138,7 +138,7 @@ const LogStreamModal = () => {
     try {
       setIsStopping(true);
       abortStreaming();
-      await openShiftClient.stopPod(pod.name, {
+      await kubernetesClient.stopPod(pod.name, {
         namespace: pod.namespace,
         owner: pod.owner ?? null,
       });
@@ -223,7 +223,7 @@ const LogStreamModal = () => {
               onClick={stopPod}
               disabled={
                 isStopping ||
-                !openShiftClient ||
+                !kubernetesClient ||
                 !pod ||
                 (pod.phase !== "Pending" && pod.phase !== "Running")
               }

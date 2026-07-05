@@ -8,20 +8,20 @@ import {
 } from "react";
 import type { LazyLog } from "@melloware/react-logviewer";
 import type { AgentPod } from "../types/pods";
-import type { OpenShiftPodApi } from "../services/openshiftClient";
+import type { KubernetesPodApi } from "../services/kubernetesClient";
 
 type StreamStatus = "idle" | "connecting" | "streaming" | "error";
 
 type UsePodLogStreamArgs = {
   pod: AgentPod | null | undefined;
-  openShiftClient: OpenShiftPodApi | null;
+  kubernetesClient: KubernetesPodApi | null;
 };
 
 const textDecoder = new TextDecoder();
 
 export const usePodLogStream = ({
   pod,
-  openShiftClient,
+  kubernetesClient,
 }: UsePodLogStreamArgs) => {
   const [status, setStatus] = useState<StreamStatus>("idle");
   const [error, setError] = useState<Error | null>(null);
@@ -99,7 +99,7 @@ export const usePodLogStream = ({
   }, []);
 
   useEffect(() => {
-    if (!pod || !openShiftClient) {
+    if (!pod || !kubernetesClient) {
       return;
     }
 
@@ -125,7 +125,7 @@ export const usePodLogStream = ({
     const startStreaming = async () => {
       try {
         setStatus("connecting");
-        reader = await openShiftClient.streamLogs(pod.name, {
+        reader = await kubernetesClient.streamLogs(pod.name, {
           namespace: pod.namespace,
           container: pod.containers[0],
           signal: abortController.signal,
@@ -179,7 +179,7 @@ export const usePodLogStream = ({
       startStreaming();
     } else {
       setStatus("idle");
-      stopWatching = openShiftClient.watchPods(
+      stopWatching = kubernetesClient.watchPods(
         (evt) => {
           if (evt.pod.name !== pod.name) return;
           if (canStreamFromPhase(evt.pod.phase) && !cancelled) {
@@ -209,7 +209,7 @@ export const usePodLogStream = ({
       abortRef.current = null;
       window.clearTimeout(autoDisableTimer);
     };
-  }, [appendLinesSafely, enableFollow, openShiftClient, pod]);
+  }, [appendLinesSafely, enableFollow, kubernetesClient, pod]);
 
   const abortStreaming = useCallback(() => {
     abortRef.current?.abort();

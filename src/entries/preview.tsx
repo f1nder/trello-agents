@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import CardBackShell from "../powerup/components/CardBackShell";
 import LogStreamModal from "../powerup/components/LogStreamModal";
-import { MockOpenShiftClient } from "../powerup/services/mockOpenShiftClient";
+import { MockKubernetesClient } from "../powerup/services/mockKubernetesClient";
 import type { ClusterSettings } from "../powerup/types/settings";
 import type { CardMetadata } from "../powerup/types/trello";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../powerup/utils/preview";
 
 const previewSettings: ClusterSettings = {
-  clusterUrl: "https://preview.openshift.local",
+  clusterUrl: "https://preview.kubernetes.local",
   namespace: "automation",
   loginAlias: "preview-service-account",
   ignoreSsl: true,
@@ -29,7 +29,7 @@ const previewCard: CardMetadata = {
   ],
 };
 
-const mockOpenShift = new MockOpenShiftClient(
+const mockKubernetes = new MockKubernetesClient(
   previewCard.id,
   previewSettings.namespace
 );
@@ -38,7 +38,7 @@ const previewConfig: PreviewConfig = {
   settings: previewSettings,
   token: "preview-token",
   card: previewCard,
-  openShiftClient: mockOpenShift,
+  kubernetesClient: mockKubernetes,
 };
 
 const IconSun = () => (
@@ -269,7 +269,7 @@ const PreviewApp = () => {
         </h1>
         <p>
           This page renders the real card-back + log modal components without
-          Trello. Dummy pods stream in via the mock OpenShift client so you can
+          Trello. Dummy pods stream in via the mock Kubernetes client so you can
           exercise Stop Pod and Stream Logs flows before wiring a live cluster.
         </p>
         <div className="theme-toggle">

@@ -14,7 +14,7 @@ const InnerPage = () => {
         <h1>Live roster staging shell</h1>
         <p className="lede">
           This lightweight view proves out the React + TypeScript baseline that will evolve into the Trello
-          Power-Up surfaces described in the spec. Future iterations will hydrate this UI with OpenShift data.
+          Power-Up surfaces described in the spec. Future iterations will hydrate this UI with Kubernetes data.
         </p>
         <button
           type="button"
@@ -37,7 +37,7 @@ const InnerPage = () => {
       <section className="callouts">
         <div>
           <h3>Single watch stream</h3>
-          <p>Upcoming work: connect to the OpenShift watch API with reconnection-only logic and no polling fallback.</p>
+          <p>Upcoming work: connect to the Kubernetes watch API with reconnection-only logic and no polling fallback.</p>
         </div>
         <div>
           <h3>Native settings page</h3>

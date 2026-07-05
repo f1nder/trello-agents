@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import type { AgentPod, PodGroup } from '../types/pods';
-import type { OpenShiftPodApi } from '../services/openshiftClient';
+import type { KubernetesPodApi } from '../services/kubernetesClient';
 import logger from '../utils/logger';
 
 const groupPods = (pods: AgentPod[]): PodGroup[] => {
@@ -38,7 +38,7 @@ const podReducer = (state: AgentPod[], action: PodAction): AgentPod[] => {
 };
 
 export interface UseLivePodsOptions {
-  client: OpenShiftPodApi | null;
+  client: KubernetesPodApi | null;
   cardId?: string | null;
   namespace?: string;
 }

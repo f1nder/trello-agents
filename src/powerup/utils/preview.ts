@@ -1,6 +1,6 @@
 import type { ClusterSettings } from '../types/settings';
 import type { CardMetadata } from '../types/trello';
-import type { OpenShiftPodApi } from '../services/openshiftClient';
+import type { KubernetesPodApi } from '../services/kubernetesClient';
 
 export type TrelloTheme = 'light' | 'dark';
 
@@ -9,7 +9,7 @@ export interface PreviewConfig {
   settings?: ClusterSettings;
   token?: string | null;
   card?: CardMetadata;
-  openShiftClient?: OpenShiftPodApi;
+  kubernetesClient?: KubernetesPodApi;
   modalArgs?: Record<string, unknown>;
   theme?: TrelloTheme;
 }

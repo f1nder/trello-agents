@@ -6,5 +6,5 @@ export const authorizationStatus: TrelloPowerUp.CapabilityHandler<[TrelloPowerUp
 });
 
 export const showAuthorization: TrelloPowerUp.CapabilityHandler<[TrelloPowerUp.Client], Promise<void>> = async (t) => {
-  await t.alert({ message: 'Future implementation: prompt for OpenShift credentials.' });
+  await t.alert({ message: 'Future implementation: prompt for Kubernetes credentials.' });
 };

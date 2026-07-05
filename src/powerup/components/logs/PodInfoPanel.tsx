@@ -7,19 +7,25 @@ type Props = {
   settings: ClusterSettings | null;
 };
 
+// Builds a Kubernetes-dashboard deep link to a pod. Uses the same scheme as the
+// upstream Kubernetes Dashboard (`#/pod/<namespace>/<name>?namespace=<namespace>`),
+// which is a sensible generic default. The dashboard base URL is configured via
+// `consoleUrl` in board settings; when it is absent, no link is rendered.
 const getConsolePodUrl = (
-  clusterUrl: string | undefined,
+  consoleUrl: string | undefined,
   namespace: string,
   podName: string
 ): string | null => {
-  if (!clusterUrl) return null;
+  if (!consoleUrl) return null;
   try {
-    const u = new URL(clusterUrl);
-    const base = `${u.protocol}//${u.host}`;
-    const path = `/console/project/${encodeURIComponent(
-      namespace
-    )}/browse/pods/${encodeURIComponent(podName)}?tab=details`;
-    return `${base}${path}`;
+    const base = new URL(consoleUrl);
+    // Preserve any base path the user configured, then append the pod route.
+    const trimmedPath = base.pathname.replace(/\/$/, "");
+    base.pathname = trimmedPath;
+    base.hash = `#/pod/${encodeURIComponent(namespace)}/${encodeURIComponent(
+      podName
+    )}?namespace=${encodeURIComponent(namespace)}`;
+    return base.toString();
   } catch {
     return null;
   }
@@ -52,13 +58,13 @@ export const PodInfoPanel: FC<Props> = ({ pod, settings }) => {
           <dd style={{ margin: 0 }}>{pod.name}</dd>
           <dt className="eyebrow">Namespace</dt>
           <dd style={{ margin: 0 }}>{pod.namespace}</dd>
-          {settings?.clusterUrl && (
+          {settings?.consoleUrl && (
             <>
-              <dt className="eyebrow">OpenShift</dt>
+              <dt className="eyebrow">Dashboard</dt>
               <dd style={{ margin: 0 }}>
                 {(() => {
                   const href = getConsolePodUrl(
-                    settings.clusterUrl,
+                    settings.consoleUrl,
                     pod.namespace,
                     pod.name
                   );
@@ -67,9 +73,9 @@ export const PodInfoPanel: FC<Props> = ({ pod, settings }) => {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Open in OpenShift Console"
+                      title="Open in Dashboard"
                     >
-                      Open in OpenShift Console ↗
+                      Open in Dashboard ↗
                     </a>
                   ) : (
                     <span style={{ opacity: 0.7 }}>Link unavailable</span>

@@ -1,9 +1,9 @@
 import { STORAGE_KEYS } from "../config/constants";
 import {
-  OpenShiftClient,
-  type OpenShiftPodApi,
+  KubernetesClient,
+  type KubernetesPodApi,
   type PodWatchEvent,
-} from "./openshiftClient";
+} from "./kubernetesClient";
 import type { AgentPod } from "../types/pods";
 import type { ClusterSettings } from "../types/settings";
 import { DEFAULT_CLUSTER_SETTINGS } from "../types/settings";
@@ -45,7 +45,7 @@ export interface PodRuntimeContext {
   cardId: string;
   namespace: string;
   fingerprint: string;
-  clientFactory: () => OpenShiftPodApi;
+  clientFactory: () => KubernetesPodApi;
 }
 
 export interface RunningPodWatcher {
@@ -213,14 +213,14 @@ const resolvePodContext = async (
   t: TrelloPowerUp.Client
 ): Promise<PodRuntimeContext | null> => {
   const preview = getPreviewConfig();
-  if (preview?.openShiftClient && preview.card?.id) {
+  if (preview?.kubernetesClient && preview.card?.id) {
     const namespace =
       preview.settings?.namespace ?? DEFAULT_CLUSTER_SETTINGS.namespace;
     return {
       cardId: preview.card.id,
       namespace,
       fingerprint: `preview:${namespace}`,
-      clientFactory: () => preview.openShiftClient!,
+      clientFactory: () => preview.kubernetesClient!,
     };
   }
 
@@ -244,7 +244,7 @@ const resolvePodContext = async (
     namespace: settings.namespace,
     fingerprint,
     clientFactory: () =>
-      new OpenShiftClient({
+      new KubernetesClient({
         baseUrl: settings.clusterUrl,
         namespace: settings.namespace,
         token,

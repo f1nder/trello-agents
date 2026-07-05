@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { AgentPod } from "../types/pods";
-import type { OpenShiftPodApi } from "../services/openshiftClient";
+import type { KubernetesPodApi } from "../services/kubernetesClient";
 import { useLivePods } from "../hooks/useLivePods";
 import { usePowerUpClient } from "../hooks/usePowerUpClient";
 import { useClusterSettings } from "../hooks/useClusterSettings";
 import { useCardMetadata } from "../hooks/useCardMetadata";
-import { OpenShiftClient } from "../services/openshiftClient";
+import { KubernetesClient } from "../services/kubernetesClient";
 import { resolveAssetUrl } from "../utils/url";
 import { getPreviewConfig } from "../utils/preview";
 import { useAppliedTrelloTheme } from "../hooks/useAppliedTrelloTheme";
@@ -135,16 +135,16 @@ const CardBackShell = () => {
   } = useCardMetadata(trello);
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set());
   const previewConfig = getPreviewConfig();
-  const previewClient = previewConfig?.openShiftClient ?? null;
+  const previewClient = previewConfig?.kubernetesClient ?? null;
 
-  const openShiftClient: OpenShiftPodApi | null = useMemo(() => {
+  const kubernetesClient: KubernetesPodApi | null = useMemo(() => {
     if (previewClient) {
       return previewClient;
     }
     if (!settings.clusterUrl || !token) {
       return null;
     }
-    return new OpenShiftClient({
+    return new KubernetesClient({
       baseUrl: settings.clusterUrl,
       namespace: settings.namespace,
       token,
@@ -154,7 +154,7 @@ const CardBackShell = () => {
   }, [previewClient, settings, token]);
 
   const livePods = useLivePods({
-    client: openShiftClient,
+    client: kubernetesClient,
     cardId: card?.id ?? null,
     namespace: settings.namespace,
   });
@@ -208,7 +208,7 @@ const CardBackShell = () => {
   };
 
   const handleStopPod = async (pod: AgentPod) => {
-    if (!trello || !openShiftClient) {
+    if (!trello || !kubernetesClient) {
       return;
     }
     const confirmed = await confirmPodDeletion(pod, trello);
@@ -217,7 +217,7 @@ const CardBackShell = () => {
     }
     markPending(pod.id, true);
     try {
-      await openShiftClient.stopPod(pod.name, {
+      await kubernetesClient.stopPod(pod.name, {
         namespace: pod.namespace,
         owner: pod.owner ?? null,
       });
@@ -269,7 +269,7 @@ const CardBackShell = () => {
   }
   if (settingsStatus === "ready" && !token) {
     readinessHints.push(
-      "Store a service-account token to connect to OpenShift."
+      "Store a service-account token to connect to Kubernetes."
     );
   }
   if (cardStatus === "loading") {
@@ -425,7 +425,7 @@ const CardBackShell = () => {
                   onStop={handleStopPod}
                   onStreamLogs={handleStreamLogs}
                   disabled={
-                    !trello || !openShiftClient || readinessHints.length > 0
+                    !trello || !kubernetesClient || readinessHints.length > 0
                   }
                   isStopping={pendingStopIds.has(pod.id)}
                   variant="compact"

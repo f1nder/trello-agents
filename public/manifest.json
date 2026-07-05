@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "name": "Card Agents Live Roster",
-  "description": "Live OpenShift pod roster + controls embedded directly on Trello cards.",
+  "description": "Live Kubernetes pod roster + controls embedded directly on Trello cards.",
   "author": "Trello-Agents",
   "capabilities": [
     "card-back-section",
@@ -20,7 +20,7 @@
   "connectors": [
     {
       "title": "Cluster Settings",
-      "description": "Configure OpenShift URL, namespace, token, and SSL options",
+      "description": "Configure Kubernetes URL, namespace, token, and SSL options",
       "url": "./settings.html",
       "icon": {
         "url": "./icons/card-agents.svg"
